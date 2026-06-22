@@ -64,3 +64,32 @@ Scaling later to EyePACS strengthens the academic quality of the work by providi
 ### Status
 
 Accepted.
+
+## Decision 003 — Use RETFound as a Frozen Feature Extractor First
+
+**Date:** 2026-06-22
+
+### Decision
+
+The first implementation will use RETFound as a frozen feature extractor. The RETFound backbone will be loaded with pretrained weights, kept frozen, and used to extract image embeddings. Deterministic and Bayesian last-layer classifiers will then be trained on top of the saved embeddings.
+
+### Rationale
+
+The central research question is whether Bayesian last-layer adaptation improves calibration, uncertainty estimation, selective referral, and robustness under dataset shift.
+
+Starting with frozen RETFound embeddings keeps the initial experiments focused on this question. It avoids mixing the effects of Bayesian last-layer adaptation with the additional complexity of full or partial foundation-model fine-tuning.
+
+This strategy also supports faster experimentation. Once embeddings are extracted, multiple last-layer methods can be trained and evaluated without repeatedly running the full RETFound image backbone.
+
+### Consequences
+
+- The first experiments will focus on last-layer adaptation rather than end-to-end fine-tuning.
+- RETFound embedding extraction becomes a key intermediate step.
+- Saved embeddings must include metadata such as dataset, split, label mapping, checkpoint identifier, preprocessing version, and git commit hash.
+- Full or partial RETFound fine-tuning remains a later extension.
+- The A100/H100 cluster will be used for full-dataset embedding extraction.
+- The local MacBook Pro M3 Pro will be used mainly for development, smoke tests, and analysis.
+
+### Status
+
+Accepted.
