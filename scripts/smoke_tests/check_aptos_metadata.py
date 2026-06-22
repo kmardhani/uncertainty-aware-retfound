@@ -1,6 +1,6 @@
 """Smoke test for APTOS metadata loading."""
 
-from pathlib import Path
+#from pathlib import Path
 
 from uncertainty_retfound.data.aptos import load_aptos_metadata
 from uncertainty_retfound.utils.config import load_yaml_config
