@@ -11,3 +11,8 @@ wheels/
 
 .ipynb_checkpoints/
 .DS_Store
+
+# Local data and outputs
+data/
+outputs/
+results/
