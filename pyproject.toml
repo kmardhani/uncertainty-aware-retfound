@@ -1,0 +1,14 @@
+[project]
+name = "uncertainty-aware-retfound"
+version = "0.1.0"
+description = "Research project on uncertainty-aware RETFound adaptation for calibrated retinal disease classification"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "pytest>=9.1.1",
+    "ruff>=0.15.18",
+]
