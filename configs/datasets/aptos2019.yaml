@@ -1,0 +1,84 @@
+dataset:
+  name: aptos2019
+  display_name: "APTOS 2019 Blindness Detection"
+  task_domain: "diabetic_retinopathy"
+  image_modality: "color_fundus"
+
+paths:
+  raw_dir: "data/raw/aptos2019"
+  processed_dir: "data/processed/aptos2019"
+  splits_dir: "data/splits/aptos2019"
+  labels_csv: "data/raw/aptos2019/train.csv"
+  image_dir: "data/raw/aptos2019/train_images"
+
+labels:
+  original_label_column: "diagnosis"
+  image_id_column: "id_code"
+  original_classes:
+    0: "no_dr"
+    1: "mild_dr"
+    2: "moderate_dr"
+    3: "severe_dr"
+    4: "proliferative_dr"
+
+tasks:
+  binary_dr:
+    description: "No diabetic retinopathy vs any diabetic retinopathy"
+    type: "binary"
+    positive_class: "any_dr"
+    mapping:
+      0: 0
+      1: 1
+      2: 1
+      3: 1
+      4: 1
+    class_names:
+      0: "no_dr"
+      1: "any_dr"
+
+  referable_dr:
+    description: "Non-referable diabetic retinopathy vs referable diabetic retinopathy"
+    type: "binary"
+    positive_class: "referable_dr"
+    mapping:
+      0: 0
+      1: 0
+      2: 1
+      3: 1
+      4: 1
+    class_names:
+      0: "non_referable_dr"
+      1: "referable_dr"
+
+  five_class_dr:
+    description: "Five-class diabetic retinopathy severity grading"
+    type: "multiclass"
+    mapping:
+      0: 0
+      1: 1
+      2: 2
+      3: 3
+      4: 4
+    class_names:
+      0: "no_dr"
+      1: "mild_dr"
+      2: "moderate_dr"
+      3: "severe_dr"
+      4: "proliferative_dr"
+
+splits:
+  strategy: "stratified"
+  train_fraction: 0.70
+  val_fraction: 0.15
+  test_fraction: 0.15
+  random_seed: 42
+
+preprocessing:
+  image_size: 224
+  preserve_aspect_ratio: true
+  normalization: "retfound_default"
+  notes: "Exact RETFound preprocessing will be confirmed during RETFound integration."
+
+usage:
+  initial_task: "referable_dr"
+  initial_role: "pipeline_validation"

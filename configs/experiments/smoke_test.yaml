@@ -1,0 +1,37 @@
+experiment:
+  name: "smoke_test"
+  description: "Minimal smoke test for package imports, configuration loading, and basic pipeline wiring."
+  seed: 42
+
+dataset:
+  config_path: "configs/datasets/aptos2019.yaml"
+  name: "aptos2019"
+  task: "referable_dr"
+  max_samples: 16
+
+model:
+  backbone: "retfound"
+  mode: "frozen_feature_extractor"
+  checkpoint: "to_be_confirmed"
+  embedding_source: "to_be_confirmed"
+
+outputs:
+  output_dir: "outputs/experiments/smoke_test"
+  save_predictions: false
+  save_embeddings: false
+
+runtime:
+  device: "auto"
+  num_workers: 0
+  batch_size: 4
+
+checks:
+  check_package_import: true
+  check_config_load: true
+  check_dataset_paths_exist: false
+  check_model_load: false
+  check_forward_pass: false
+
+notes:
+  - "This smoke test does not require the dataset to be downloaded."
+  - "Model loading and forward-pass checks will be enabled after RETFound integration is implemented."
