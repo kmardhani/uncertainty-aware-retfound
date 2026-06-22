@@ -1,0 +1,6 @@
+id_code,diagnosis
+sample_no_dr,0
+sample_mild,1
+sample_moderate,2
+sample_severe,3
+sample_proliferative,4
