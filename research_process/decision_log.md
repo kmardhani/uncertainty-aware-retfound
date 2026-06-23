@@ -216,3 +216,59 @@ ComposeTransforms
 build_transform_from_config
 ```
 
+## Decision: Add PyTorch DataLoader Utilities Before Model Training
+
+**Date:** 2026-06-22  
+
+**Status:** Accepted
+
+### Context
+
+The project had a tested data preparation pipeline, image path validation, dataset wrapper, and Pillow-based preprocessing transforms. The next step was to convert dataset samples into tensor batches that future training code can consume.
+
+### Decision
+
+Add PyTorch and torchvision dependencies, update `APTOSDataset` to inherit from `torch.utils.data.Dataset`, add torchvision transform construction, and add a minimal dataloader utility.
+
+The dataloader utility is intentionally small and does not include training logic.
+
+### Rationale
+
+This creates the necessary bridge between the data pipeline and future model training while keeping the scope limited.
+
+Adding PyTorch is now justified because the project has reached the point where batch tensor creation is needed. PyTorch was intentionally not added earlier to avoid premature dependency expansion.
+
+### Consequences
+
+Positive consequences:
+
+- Dataset samples can now be batched for training.
+
+- Image tensors can be produced through torchvision transforms.
+
+- Batch outputs preserve image paths and image identifiers.
+
+- The project is ready for a baseline model/training skeleton.
+
+- The full test suite now passes with 33 tests.
+
+Limitations:
+
+- No model is implemented yet.
+
+- No training loop is implemented yet.
+
+- No metrics or calibration logic is implemented yet.
+
+- RETFound integration is still pending.
+
+### Follow-up Actions
+
+- Add a minimal baseline model.
+
+- Add a one-batch training-step test.
+
+- Add simple classification loss handling.
+
+- Add baseline evaluation utilities before RETFound-specific work.
+

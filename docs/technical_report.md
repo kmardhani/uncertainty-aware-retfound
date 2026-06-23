@@ -46,3 +46,18 @@ The implementation is located in:
 
 src/uncertainty_retfound/data/transforms.py
 ```
+
+## PyTorch DataLoader Integration
+
+The project now includes PyTorch and torchvision support for converting APTOS image-label examples into tensor batches.
+
+This milestone bridges the data preparation and dataset wrapper layers into the training ecosystem, without yet introducing a model or training loop.
+
+### Implementation
+
+`APTOSDataset` now inherits from:
+
+```text
+
+torch.utils.data.Dataset
+```

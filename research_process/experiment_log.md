@@ -151,3 +151,44 @@ The transform utilities were added to:
 ```text
 
 src/uncertainty_retfound/data/transforms.py
+```
+## Experiment: PyTorch DataLoader Smoke Test
+
+**Date:** 2026-06-22  
+
+**Status:** Completed  
+
+**Related commit:**
+
+- `8578751` Add PyTorch dataloader utilities
+
+### Objective
+
+Validate that APTOS image-label examples can be converted into PyTorch tensor batches suitable for future model training.
+
+This step bridges the existing PIL-based dataset layer into the PyTorch training ecosystem while still avoiding model, training-loop, and RETFound integration.
+
+### Scope
+
+The implementation supports:
+
+1. `APTOSDataset` inheritance from `torch.utils.data.Dataset`.
+
+2. Torchvision-based transform construction.
+
+3. Tensor conversion for images.
+
+4. Optional image normalization.
+
+5. PyTorch `DataLoader` creation.
+
+6. Dictionary-style batch output containing images, labels, image paths, and image identifiers.
+
+### Implementation
+
+The `APTOSDataset` class was updated in:
+
+```text
+
+src/uncertainty_retfound/data/aptos.py
+```
