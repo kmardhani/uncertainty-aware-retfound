@@ -27,3 +27,14 @@ Image path functionality is implemented in:
 ```text
 
 src/uncertainty_retfound/data/aptos.py
+```
+
+## APTOS Dataset Wrapper
+
+The project now includes a lightweight dataset wrapper for loading APTOS image-label examples from prepared metadata.
+
+The implementation is located in:
+
+```text
+
+src/uncertainty_retfound/data/aptos.py

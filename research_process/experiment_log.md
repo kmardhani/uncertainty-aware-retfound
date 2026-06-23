@@ -61,3 +61,50 @@ Image path resolution and validation functionality was added to:
 
 ```text
 src/uncertainty_retfound/data/aptos.py
+```
+
+## Experiment: APTOS Dataset Wrapper Smoke Test
+
+**Date:** 2026-06-22  
+
+**Status:** Completed  
+
+**Related commit:**
+
+- `bd5ad1b` Add APTOS dataset wrapper
+
+### Objective
+
+Validate a lightweight dataset wrapper for loading APTOS image-label examples from prepared metadata.
+
+This step creates the bridge between metadata preparation and future model training while avoiding premature RETFound or PyTorch training integration.
+
+### Scope
+
+The dataset wrapper supports:
+
+1. Loading prepared metadata from a pandas dataframe.
+
+2. Loading prepared metadata from a CSV file.
+
+3. Resolving image paths from metadata rows.
+
+4. Opening individual image files.
+
+5. Converting images to RGB.
+
+6. Returning labels from the configured label column.
+
+7. Applying an optional transform.
+
+8. Returning structured samples containing image, label, image path, and image identifier.
+
+9. Early validation of missing image paths when enabled.
+
+### Implementation
+
+The dataset wrapper was added to:
+
+```text
+
+src/uncertainty_retfound/data/aptos.py

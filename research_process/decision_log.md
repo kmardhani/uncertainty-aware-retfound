@@ -158,3 +158,32 @@ A CLI script was added:
 ```text
 
 scripts/data/validate_aptos_images.py
+```
+
+## Decision: Add a Lightweight APTOS Dataset Wrapper Before RETFound Integration
+
+**Date:** 2026-06-22  
+
+**Status:** Accepted
+
+### Context
+
+After implementing metadata preparation and image path validation, the next step was to create a model-facing interface for reading APTOS examples.
+
+The project needs a dataset abstraction that can load individual images and labels from prepared metadata. However, full RETFound integration and PyTorch training are not yet ready.
+
+### Decision
+
+Add an `APTOSDataset` wrapper that supports dataframe or CSV metadata input, resolves image paths, opens images with Pillow, converts images to RGB, applies an optional transform, and returns structured samples.
+
+The dataset currently returns dictionaries containing:
+
+```text
+
+image
+
+label
+
+image_path
+
+id_code
