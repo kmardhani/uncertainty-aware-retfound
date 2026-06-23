@@ -228,3 +228,68 @@ The baseline model was added in:
 ```text
 src/uncertainty_retfound/models/baseline.py
 ```
+## Experiment Infrastructure: Baseline Training CLI
+
+**Date:** 2026-06-22  
+**Status:** Completed  
+**Related commit:**
+- `a2ebf1e` Add baseline training CLI
+
+### Objective
+
+Add a reproducible command-line entry point for running the baseline training pipeline from prepared metadata and an image root directory.
+
+This milestone connects the existing dataset, dataloader, baseline model, training loop, evaluation loop, and classification metrics into a single runnable command.
+
+### Scope
+
+The CLI supports:
+
+    loading prepared metadata CSV
+    filtering train and validation splits
+    constructing torchvision transforms
+    creating APTOSDataset instances
+    creating PyTorch DataLoaders
+    training SmallCNNClassifier
+    evaluating after each epoch
+    writing metrics.json to an output directory
+
+### Validation
+
+The CLI is covered by tests using fake PNG images under temporary directories.
+
+The tests verify:
+
+    metrics.json is created
+    expected JSON keys are present
+    epoch metrics are recorded
+    train loss is finite and non-negative
+    validation loss is finite and non-negative
+    validation accuracy is included
+    missing split column raises a clear error
+    empty train split raises a clear error
+    empty validation split raises a clear error
+
+The full test suite passed with:
+
+    53 passed
+
+### Notes
+
+The CLI does not download data and does not require the full APTOS dataset for tests.
+
+For real experiments, the CLI should be run on the cluster after:
+
+    full APTOS dataset download
+    metadata preparation
+    image path validation with zero missing images
+
+The first cluster run should be treated as a baseline smoke experiment before RETFound integration.
+
+### Next Steps
+
+    run full APTOS metadata preparation on the cluster
+    validate all real image paths on the cluster
+    run a one-epoch baseline smoke experiment
+    record the first real baseline metrics
+    integrate RETFound after the baseline path is validated

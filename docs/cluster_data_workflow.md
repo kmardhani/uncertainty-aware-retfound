@@ -165,3 +165,43 @@ Major design decisions should be summarized in:
 Because the local MacBook has limited free storage, the project will not download the full APTOS 2019 dataset locally.
 
 Local development will continue with fixture and fake-image tests. Full-data validation and training will run on the cluster.
+
+## Baseline Training CLI
+
+The project now includes a baseline training CLI:
+
+    scripts/training/train_baseline.py
+
+This script does not download data. It expects prepared metadata and image files to already exist.
+
+On the cluster, after metadata preparation and image path validation succeed, run a baseline smoke experiment with:
+
+    uv run python scripts/training/train_baseline.py \
+      --metadata-csv data/processed/aptos2019_referable_dr_metadata_splits.csv \
+      --image-root data/raw/aptos2019/train_images \
+      --output-dir outputs/baseline_referable_dr_smoke \
+      --num-classes 2 \
+      --epochs 1 \
+      --batch-size 16 \
+      --learning-rate 0.001 \
+      --resize 256 \
+      --center-crop 224
+
+The CLI will:
+
+    load prepared metadata
+    filter train and validation splits
+    build torchvision transforms
+    create APTOSDataset instances
+    create PyTorch DataLoaders
+    train SmallCNNClassifier
+    evaluate after each epoch
+    write metrics.json under the output directory
+
+The first baseline run should be treated as a smoke test. It verifies that the full-data training path works on the cluster before RETFound integration begins.
+
+Expected output location:
+
+    outputs/baseline_referable_dr_smoke/metrics.json
+
+The output directory is ignored by Git and should not be committed.

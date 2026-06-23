@@ -75,3 +75,49 @@ The baseline model is implemented in:
 ```text
 src/uncertainty_retfound/models/baseline.py
 ```
+## Baseline Training CLI
+
+The project now includes a runnable baseline training command implemented in:
+
+    scripts/training/train_baseline.py
+
+The CLI connects the existing data and training infrastructure into a reproducible experiment entry point.
+
+It uses:
+
+    prepared metadata CSV
+    image root directory
+    APTOSDataset
+    torchvision transforms
+    PyTorch DataLoaders
+    SmallCNNClassifier
+    train_one_epoch
+    evaluate_model
+    classification_summary
+
+The CLI accepts command-line arguments for metadata path, image root, output directory, number of classes, number of epochs, batch size, learning rate, resize size, center crop size, split names, image identifier column, label column, image extension, device, and random seed.
+
+The CLI does not download the dataset. It assumes that metadata preparation and image path validation have already completed.
+
+A typical cluster smoke command is:
+
+    uv run python scripts/training/train_baseline.py \
+      --metadata-csv data/processed/aptos2019_referable_dr_metadata_splits.csv \
+      --image-root data/raw/aptos2019/train_images \
+      --output-dir outputs/baseline_referable_dr_smoke \
+      --num-classes 2 \
+      --epochs 1 \
+      --batch-size 16 \
+      --learning-rate 0.001 \
+      --resize 256 \
+      --center-crop 224
+
+The CLI writes a JSON metrics file to:
+
+    metrics.json
+
+inside the requested output directory.
+
+The metrics file records the input paths, training configuration, per-epoch training loss, per-epoch validation loss, validation accuracy when available, and final validation metrics where practical.
+
+This provides the first reproducible experiment command for the project. It is intentionally limited to the small CNN baseline and does not include RETFound, checkpointing, calibration metrics, uncertainty metrics, or experiment tracking frameworks yet.
