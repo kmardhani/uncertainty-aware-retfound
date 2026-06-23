@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import pytest
@@ -108,6 +109,7 @@ def _build_fake_checkpoint(
     container_key: str = "model",
     prefix: str = "",
     include_mismatched_head: bool = False,
+    include_args_namespace: bool = False,
 ) -> None:
     import importlib.util
     import sys
@@ -131,7 +133,12 @@ def _build_fake_checkpoint(
         checkpoint_state_dict[f"{prefix}head.weight"] = torch.randn(5, 8)
         checkpoint_state_dict[f"{prefix}head.bias"] = torch.randn(5)
 
-    torch.save({container_key: checkpoint_state_dict}, checkpoint_path)
+    checkpoint_payload: dict[str, object] = {container_key: checkpoint_state_dict}
+
+    if include_args_namespace:
+        checkpoint_payload["args"] = argparse.Namespace(model="RETFound_mae", img_size=224)
+
+    torch.save(checkpoint_payload, checkpoint_path)
 
 
 def test_frozen_encoder_classifier_returns_expected_logit_shape() -> None:
@@ -348,6 +355,33 @@ def test_load_external_retfound_encoder_ignores_mismatched_head_keys(
 
     outputs = encoder(torch.randn(2, 3, 32, 32))
     assert outputs.shape == (2, 8)
+
+
+def test_load_external_retfound_encoder_supports_checkpoint_with_argparse_namespace(
+    tmp_path: Path,
+) -> None:
+    repo_path = tmp_path / "fake_retfound_repo"
+    checkpoint_path = tmp_path / "checkpoint_with_args.pth"
+    _write_fake_models_vit(repo_path)
+    _build_fake_checkpoint(
+        repo_path,
+        checkpoint_path,
+        include_args_namespace=True,
+    )
+
+    encoder = load_external_retfound_encoder(
+        retfound_repo_path=repo_path,
+        checkpoint_path=checkpoint_path,
+        feature_dim=8,
+    )
+    model = FrozenEncoderClassifier(
+        encoder=encoder,
+        feature_dim=8,
+        num_classes=2,
+    )
+
+    outputs = model(torch.randn(2, 3, 32, 32))
+    assert outputs.shape == (2, 2)
 
 
 def test_build_retfound_linear_classifier_requires_repo_path(tmp_path: Path) -> None:

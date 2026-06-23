@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import argparse
 import importlib
+import inspect
+import pickle
 import sys
 from contextlib import contextmanager
 from pathlib import Path
@@ -161,6 +164,44 @@ def _extract_checkpoint_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
     return normalized_state_dict
 
 
+def _load_checkpoint_file(checkpoint: Path) -> object:
+    """Load a checkpoint file with explicit PyTorch safe-loading behavior.
+
+    For PyTorch versions that support ``weights_only``, this first uses
+    ``weights_only=True``. If the checkpoint contains a trusted
+    ``argparse.Namespace`` metadata object, it retries with a narrow allowlist.
+    As a final explicit fallback for trusted external research checkpoints only,
+    it uses ``weights_only=False``.
+    """
+
+    torch_load_parameters = inspect.signature(torch.load).parameters
+    supports_weights_only = "weights_only" in torch_load_parameters
+
+    if not supports_weights_only:
+        try:
+            return torch.load(checkpoint, map_location="cpu")
+        except Exception as error:
+            raise RuntimeError(f"Could not load RETFound checkpoint: {checkpoint}") from error
+
+    try:
+        return torch.load(checkpoint, map_location="cpu", weights_only=True)
+    except pickle.UnpicklingError as error:
+        if "argparse.Namespace" in str(error):
+            try:
+                with torch.serialization.safe_globals([argparse.Namespace]):
+                    return torch.load(checkpoint, map_location="cpu", weights_only=True)
+            except Exception:
+                pass
+
+    try:
+        # Final explicit fallback for trusted external research checkpoints only.
+        # Some third-party checkpoints may contain small non-tensor metadata that
+        # still prevents weights_only loading even after a narrow allowlist retry.
+        return torch.load(checkpoint, map_location="cpu", weights_only=False)
+    except Exception as fallback_error:
+        raise RuntimeError(f"Could not load RETFound checkpoint: {checkpoint}") from fallback_error
+
+
 def _strip_common_prefixes(state_dict: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
     """Strip common distributed/backbone prefixes from checkpoint keys."""
 
@@ -237,10 +278,7 @@ def load_external_retfound_encoder(
             f"Architecture '{architecture}' did not return a torch.nn.Module instance."
         )
 
-    try:
-        checkpoint_data = torch.load(checkpoint, map_location="cpu")
-    except Exception as error:
-        raise RuntimeError(f"Could not load RETFound checkpoint: {checkpoint}") from error
+    checkpoint_data = _load_checkpoint_file(checkpoint)
 
     state_dict = _extract_checkpoint_state_dict(checkpoint_data)
     state_dict = _strip_common_prefixes(state_dict)
