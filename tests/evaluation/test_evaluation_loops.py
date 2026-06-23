@@ -74,6 +74,42 @@ def test_evaluate_model_returns_expected_outputs_without_updating_parameters(
         assert torch.equal(before, after.detach())
 
 
+def test_evaluate_model_can_include_classification_metrics(tmp_path: Path) -> None:
+    metadata = pd.DataFrame(
+        {
+            "id_code": ["sample_a", "sample_b", "sample_c", "sample_d"],
+            "label": [0, 1, 0, 1],
+        }
+    )
+    image_root = tmp_path / "train_images"
+    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
+
+    transform = build_torchvision_transform_from_config(
+        {
+            "resize": 32,
+            "center_crop": 32,
+            "to_tensor": True,
+        }
+    )
+    dataset = APTOSDataset(
+        metadata=metadata,
+        image_root=image_root,
+        transform=transform,
+    )
+    dataloader = create_dataloader(dataset, batch_size=2, shuffle=False, num_workers=0)
+    model = SmallCNNClassifier(num_classes=2)
+
+    result = evaluate_model(model=model, dataloader=dataloader, include_metrics=True)
+
+    assert "metrics" in result
+    assert result["metrics"]["num_examples"] == 4
+    assert result["metrics"]["num_classes"] == 2
+    assert result["metrics"]["confusion_matrix"].shape == (2, 2)
+
+
 def test_evaluate_model_rejects_empty_dataloader(tmp_path: Path) -> None:
     metadata = pd.DataFrame({"id_code": [], "label": []})
     dataset = APTOSDataset(
