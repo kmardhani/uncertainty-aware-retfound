@@ -61,3 +61,17 @@ This milestone bridges the data preparation and dataset wrapper layers into the 
 
 torch.utils.data.Dataset
 ```
+
+## Baseline Training Infrastructure
+
+The project now includes a minimal baseline training and evaluation infrastructure. This milestone verifies that the data pipeline can feed image tensors into a model, compute classification loss, update model parameters, run evaluation, and compute basic classification metrics.
+
+This infrastructure is intentionally simple and is designed to reduce risk before integrating RETFound.
+
+### Baseline Model
+
+The baseline model is implemented in:
+
+```text
+src/uncertainty_retfound/models/baseline.py
+```

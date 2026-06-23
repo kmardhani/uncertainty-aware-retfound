@@ -192,3 +192,39 @@ The `APTOSDataset` class was updated in:
 
 src/uncertainty_retfound/data/aptos.py
 ```
+
+## Experiment: Baseline Training Infrastructure Smoke Test
+
+**Date:** 2026-06-22  
+**Status:** Completed  
+**Related commits:**
+- `f81656e` Add baseline model training smoke test
+- `69c8984` Add reusable training epoch loop
+- `0aef3a2` Add reusable evaluation loop
+- `ea16c76` Add baseline classification metrics
+
+### Objective
+
+Validate the first end-to-end baseline training and evaluation infrastructure for the project using fake image data.
+
+This milestone proves that the repository can move from image metadata and image files into model training, evaluation, and basic classification metrics before using the real APTOS dataset or integrating RETFound.
+
+### Scope
+
+The implemented baseline infrastructure supports:
+
+1. A minimal CNN classifier.
+2. One-batch training smoke tests.
+3. Reusable one-epoch training loop.
+4. Reusable evaluation loop.
+5. Basic classification metrics.
+6. Optional metric calculation during evaluation.
+7. CPU-only fixture-based tests using fake PNG images.
+
+### Implementation
+
+The baseline model was added in:
+
+```text
+src/uncertainty_retfound/models/baseline.py
+```

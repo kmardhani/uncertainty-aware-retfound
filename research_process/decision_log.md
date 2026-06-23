@@ -272,3 +272,85 @@ Limitations:
 
 - Add baseline evaluation utilities before RETFound-specific work.
 
+
+## Decision: Establish Baseline Training Infrastructure Before RETFound Integration
+
+**Date:** 2026-06-22  
+
+**Status:** Accepted
+
+### Context
+
+The project had already established a tested data pipeline for APTOS metadata preparation, image path validation, image loading, preprocessing transforms, tensor conversion, and PyTorch DataLoader batching.
+
+Before integrating RETFound, the project needed to prove that the training and evaluation stack works end-to-end using a simple baseline model.
+
+### Decision
+
+Add a minimal baseline training and evaluation infrastructure before RETFound integration.
+
+This includes:
+
+- A small CNN classifier.
+
+- A one-batch training step.
+
+- A reusable one-epoch training loop.
+
+- A reusable evaluation loop.
+
+- Basic classification metrics.
+
+The baseline model is intentionally simple and is not intended to be the final research model.
+
+### Rationale
+
+This decision reduces integration risk.
+
+RETFound integration will be easier and safer if the repository already has a working training path, evaluation path, and metric interface. If there are problems later, it will be easier to separate model-specific issues from general training infrastructure issues.
+
+This also supports research-grade development by ensuring that each major layer of the project is testable before the next layer is added.
+
+### Consequences
+
+Positive consequences:
+
+- The project now has a tested training smoke path.
+
+- The project has a reusable epoch-level training loop.
+
+- The project has a reusable evaluation loop.
+
+- The project has basic classification metrics.
+
+- The project can verify forward pass, loss, backward pass, optimizer step, evaluation outputs, and metrics using fake data.
+
+- The full test suite now passes with 49 tests.
+
+Limitations:
+
+- The baseline model is intentionally small and not clinically meaningful.
+
+- No real APTOS training has been run yet.
+
+- No model checkpointing exists yet.
+
+- No experiment tracking exists yet.
+
+- No calibration or uncertainty metrics exist yet.
+
+- RETFound integration is still pending.
+
+### Follow-up Actions
+
+- Download and validate the full APTOS 2019 dataset locally.
+
+- Add a real baseline training CLI.
+
+- Add checkpointing and experiment output structure.
+
+- Add calibration metrics.
+
+- Add uncertainty metrics.
+
+- Integrate RETFound after the baseline pipeline is validated on real data.
