@@ -97,6 +97,10 @@ def evaluate_model(
     logits = torch.cat(logits_batches, dim=0)
     labels = torch.cat(label_batches, dim=0)
     predictions = torch.cat(prediction_batches, dim=0)
+    positive_scores: torch.Tensor | None = None
+
+    if logits.ndim == 2 and logits.shape[1] == 2:
+        positive_scores = torch.softmax(logits, dim=1)[:, 1]
 
     result: dict[str, Any] = {
         "loss": total_loss / num_examples,
@@ -112,6 +116,7 @@ def evaluate_model(
             predictions=predictions,
             labels=labels,
             num_classes=int(logits.shape[1]),
+            positive_scores=positive_scores,
         )
 
     if include_batch_history:

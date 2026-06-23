@@ -108,6 +108,14 @@ def test_evaluate_model_can_include_classification_metrics(tmp_path: Path) -> No
     assert result["metrics"]["num_examples"] == 4
     assert result["metrics"]["num_classes"] == 2
     assert result["metrics"]["confusion_matrix"].shape == (2, 2)
+    assert "precision" in result["metrics"]
+    assert "recall" in result["metrics"]
+    assert "sensitivity" in result["metrics"]
+    assert "specificity" in result["metrics"]
+    assert "f1" in result["metrics"]
+    assert "balanced_accuracy" in result["metrics"]
+    assert "auc" in result["metrics"]
+    assert result["metrics"]["auc"] is None or 0.0 <= result["metrics"]["auc"] <= 1.0
 
 
 def test_evaluate_model_rejects_empty_dataloader(tmp_path: Path) -> None:
