@@ -293,3 +293,162 @@ The first cluster run should be treated as a baseline smoke experiment before RE
     run a one-epoch baseline smoke experiment
     record the first real baseline metrics
     integrate RETFound after the baseline path is validated
+
+## Experiment: Full APTOS Baseline Smoke Run on Cluster
+
+**Date:** 2026-06-23  
+**Status:** Completed  
+**Environment:** Cluster GPU instance  
+**GPU:** NVIDIA A100 40GB  
+**Task:** Referable diabetic retinopathy classification  
+**Model:** SmallCNNClassifier  
+**Dataset:** APTOS 2019 mirror from Kaggle  
+**Output directory:** `outputs/baseline_referable_dr_smoke_progress`
+
+### Objective
+
+Validate the full real-data training pipeline on the cluster before integrating RETFound.
+
+This smoke run was intended to confirm that the project can:
+
+    download and store the full APTOS dataset on the cluster
+    prepare referable DR metadata
+    validate real image paths
+    create a unified image root
+    train on GPU
+    evaluate on the validation split
+    save epoch-level metrics
+    save batch-level training and validation history
+
+This run was not intended to produce a strong model.
+
+### Dataset Preparation
+
+The Kaggle mirror provided separate metadata files and image folders:
+
+    train_1.csv
+    valid.csv
+    test.csv
+
+The split sizes were:
+
+    train: 2930
+    val: 366
+    test: 366
+    total: 3662
+
+For the referable DR binary task, labels were mapped as:
+
+    diagnosis 0 or 1 -> label 0
+    diagnosis 2, 3, or 4 -> label 1
+
+The resulting label distribution was:
+
+    label 0: 2175
+    label 1: 1487
+
+Validation split label distribution:
+
+    label 0: 212
+    label 1: 154
+
+The majority-class validation baseline is therefore:
+
+    212 / 366 = 0.5792
+
+### Image Validation
+
+The dataset mirror stores images in split-specific folders:
+
+    data/raw/aptos2019/train_images/train_images
+    data/raw/aptos2019/val_images/val_images
+    data/raw/aptos2019/test_images/test_images
+
+Image path validation passed for all splits:
+
+    train: rows=2930, missing=0
+    val: rows=366, missing=0
+    test: rows=366, missing=0
+
+A unified symlink image root was created for the training CLI:
+
+    data/raw/aptos2019/all_images
+
+The unified image root contained:
+
+    3662 symlink entries
+    3662 valid resolved image files
+
+### Command
+
+The smoke run used:
+
+    uv run python -m scripts.training.train_baseline \
+      --metadata-csv data/processed/aptos2019_referable_dr_metadata_splits.csv \
+      --image-root data/raw/aptos2019/all_images \
+      --output-dir outputs/baseline_referable_dr_smoke_progress \
+      --num-classes 2 \
+      --epochs 1 \
+      --batch-size 32 \
+      --learning-rate 0.001 \
+      --resize 256 \
+      --center-crop 224 \
+      --device cuda
+
+### Results
+
+The one-epoch smoke run completed successfully on GPU.
+
+Epoch-level metrics:
+
+    train_loss: 0.6761
+    val_loss: 0.6787
+    val_accuracy: 0.5792
+
+Validation confusion matrix:
+
+    [[212,   0],
+     [154,   0]]
+
+Per-class validation accuracy:
+
+    class 0: 1.0
+    class 1: 0.0
+
+Batch history was saved successfully:
+
+    train batch records: 92
+    validation batch records: 12
+
+### Interpretation
+
+The model predicted only the majority class on the validation set.
+
+The validation accuracy therefore matches the majority-class baseline:
+
+    0.5792
+
+This confirms that the tiny CNN did not learn meaningful disease signal in the one-epoch smoke run. That is acceptable because the purpose of this experiment was infrastructure validation, not model performance.
+
+The smoke run successfully validated the real-data training path:
+
+    full APTOS data available on cluster
+    metadata preparation works
+    image path validation works
+    unified image root works
+    GPU training works
+    metrics.json is written
+    batch-level history is written
+    validation metrics are interpretable
+
+### Next Step
+
+Move from the tiny CNN infrastructure baseline to the real project baseline:
+
+    RETFound frozen encoder
+    simple linear classification head
+    referable DR task
+    validation metrics
+    later calibration and uncertainty metrics
+
+The tiny CNN baseline should be treated as an infrastructure smoke baseline, not the main model baseline for the research project.
