@@ -104,6 +104,20 @@ class FrozenEncoderClassifier(nn.Module):
         return self.head(features)
 
 
+class ForwardFeaturesEncoder(nn.Module):
+    """Wrap an encoder and expose ``forward_features`` as the forward path."""
+
+    def __init__(self, encoder: nn.Module) -> None:
+        super().__init__()
+        self.encoder = encoder
+
+    def forward(self, inputs: torch.Tensor) -> Any:
+        forward_features = getattr(self.encoder, "forward_features", None)
+        if not callable(forward_features):
+            raise AttributeError("Wrapped encoder does not define callable forward_features().")
+        return forward_features(inputs)
+
+
 @contextmanager
 def _temporary_sys_path(path: Path) -> Any:
     """Temporarily prepend a path to sys.path for external repo imports."""
@@ -135,6 +149,26 @@ def _import_models_vit_module(retfound_repo_path: Path) -> ModuleType:
         sys.modules.pop("models_vit", None)
         if previous_module is not None:
             sys.modules["models_vit"] = previous_module
+
+
+def _instantiate_external_architecture(architecture_builder: Any) -> nn.Module:
+    """Instantiate an external RETFound architecture with num_classes=0 when supported."""
+
+    signature = inspect.signature(architecture_builder)
+    parameters = signature.parameters
+    supports_num_classes = "num_classes" in parameters or any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters.values()
+    )
+
+    if supports_num_classes:
+        model = architecture_builder(num_classes=0)
+    else:
+        model = architecture_builder()
+
+    if not isinstance(model, nn.Module):
+        raise TypeError("External RETFound architecture did not return a torch.nn.Module.")
+
+    return model
 
 
 def _extract_checkpoint_state_dict(checkpoint: Any) -> dict[str, torch.Tensor]:
@@ -272,11 +306,7 @@ def load_external_retfound_encoder(
             f"'models_vit' from {repo_path}."
         )
 
-    encoder = architecture_builder()
-    if not isinstance(encoder, nn.Module):
-        raise TypeError(
-            f"Architecture '{architecture}' did not return a torch.nn.Module instance."
-        )
+    encoder = _instantiate_external_architecture(architecture_builder)
 
     checkpoint_data = _load_checkpoint_file(checkpoint)
 
@@ -291,6 +321,9 @@ def load_external_retfound_encoder(
             "Failed to load checkpoint state into the external RETFound encoder. "
             f"Checkpoint: {checkpoint}"
         ) from error
+
+    if callable(getattr(encoder, "forward_features", None)):
+        return ForwardFeaturesEncoder(encoder)
 
     return encoder
 

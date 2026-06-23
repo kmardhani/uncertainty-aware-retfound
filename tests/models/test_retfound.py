@@ -84,19 +84,23 @@ from torch import nn
 
 
 class FakeRETFoundEncoder(nn.Module):
-    def __init__(self, feature_dim: int = 8) -> None:
+    def __init__(self, feature_dim: int = 8, num_classes: int = 1000) -> None:
         super().__init__()
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.proj = nn.Linear(3, feature_dim)
-        self.head = nn.Linear(feature_dim, 3)
+        self.head = nn.Linear(feature_dim, 1000)
 
-    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def forward_features(self, inputs: torch.Tensor) -> torch.Tensor:
         pooled = self.pool(inputs).flatten(1)
         return self.proj(pooled)
 
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        features = self.forward_features(inputs)
+        return self.head(features)
 
-def RETFound_mae() -> nn.Module:
-    return FakeRETFoundEncoder(feature_dim=8)
+
+def RETFound_mae(**kwargs) -> nn.Module:
+    return FakeRETFoundEncoder(feature_dim=8, **kwargs)
 """.strip(),
         encoding="utf-8",
     )
