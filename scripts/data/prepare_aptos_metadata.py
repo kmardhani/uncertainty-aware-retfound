@@ -379,12 +379,11 @@ def add_train_val_test_split(
     return result
 
 
-def prepare_metadata(
+def build_prepared_metadata(
     config_path: Path,
-    output_path: Path,
     task: str | None = None,
 ) -> pd.DataFrame:
-    """Prepare APTOS metadata and write the split CSV."""
+    """Prepare APTOS metadata in memory."""
     config = load_yaml(config_path)
     metadata_csv_path = get_metadata_csv_path(config, config_path)
 
@@ -408,10 +407,27 @@ def prepare_metadata(
         seed=split_config["seed"],
     )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(output_path, index=False)
-
     return df
+
+
+def write_prepared_metadata(
+    dataframe: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    """Write prepared metadata to disk."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    dataframe.to_csv(output_path, index=False)
+
+
+def prepare_metadata(
+    config_path: Path,
+    output_path: Path,
+    task: str | None = None,
+) -> pd.DataFrame:
+    """Prepare APTOS metadata and write the split CSV."""
+    dataframe = build_prepared_metadata(config_path, task=task)
+    write_prepared_metadata(dataframe, output_path)
+    return dataframe
 
 
 def parse_args() -> argparse.Namespace:
