@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import Any, cast
 
 import torch
 from torch import nn
@@ -10,6 +11,27 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from uncertainty_retfound.evaluation.metrics import classification_summary
+
+
+def _extract_batch_string_values(
+    batch: Mapping[str, object],
+    key: str,
+) -> list[str]:
+    """Extract a list of string-like values from a batch mapping."""
+
+    raw_values = batch.get(key)
+    if raw_values is None:
+        return []
+
+    if not isinstance(raw_values, Sequence) or isinstance(raw_values, (str, bytes)):
+        raise TypeError(f"batch['{key}'] must be a list or tuple of strings.")
+
+    sequence_values = cast(Sequence[object], raw_values)
+    extracted_values: list[str] = []
+    for raw_value in sequence_values:
+        extracted_values.append(str(raw_value))
+
+    return extracted_values
 
 
 def evaluate_model(
@@ -31,6 +53,8 @@ def evaluate_model(
     logits_batches: list[torch.Tensor] = []
     label_batches: list[torch.Tensor] = []
     prediction_batches: list[torch.Tensor] = []
+    image_path_values: list[str] = []
+    id_code_values: list[str] = []
     batch_history: list[dict[str, float | int]] = []
 
     if device is not None:
@@ -47,14 +71,24 @@ def evaluate_model(
 
     with torch.no_grad():
         for batch_index, batch in enumerate(dataloader_iterator, start=1):
-            images = batch["image"]
-            labels = batch["label"]
+            if not isinstance(batch, Mapping):
+                raise TypeError("Each dataloader batch must be a mapping.")
 
-            if not isinstance(images, torch.Tensor):
+            batch_mapping = cast(Mapping[str, object], batch)
+            images_object: object = batch_mapping["image"]
+            labels_object: object = batch_mapping["label"]
+
+            if not isinstance(images_object, torch.Tensor):
                 raise TypeError("batch['image'] must be a torch.Tensor.")
 
-            if not isinstance(labels, torch.Tensor):
+            if not isinstance(labels_object, torch.Tensor):
                 raise TypeError("batch['label'] must be a torch.Tensor.")
+
+            images = images_object
+            labels = labels_object
+
+            image_path_values.extend(_extract_batch_string_values(batch_mapping, "image_path"))
+            id_code_values.extend(_extract_batch_string_values(batch_mapping, "id_code"))
 
             if device is not None:
                 images = images.to(device)
@@ -112,6 +146,15 @@ def evaluate_model(
         "labels": labels,
         "predictions": predictions,
     }
+
+    if logits.ndim == 2:
+        result["probabilities"] = torch.softmax(logits, dim=1)
+
+    if image_path_values:
+        result["image_paths"] = image_path_values
+
+    if id_code_values:
+        result["id_codes"] = id_code_values
 
     if include_metrics:
         result["metrics"] = classification_summary(

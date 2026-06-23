@@ -102,10 +102,14 @@ def test_run_baseline_training_writes_metrics_json(tmp_path: Path) -> None:
     )
 
     metrics_path = output_dir / "metrics.json"
+    validation_predictions_path = output_dir / "validation_predictions.csv"
     metrics_json = json.loads(metrics_path.read_text(encoding="utf-8"))
+    validation_predictions = pd.read_csv(validation_predictions_path)
 
     assert metrics_path.exists()
+    assert validation_predictions_path.exists()
     assert result["metrics_path"] == str(metrics_path)
+    assert result["validation_predictions_path"] == str(validation_predictions_path)
     assert metrics_json["metadata_csv"] == str(metadata_path)
     assert metrics_json["image_root"] == str(image_root)
     assert metrics_json["num_classes"] == 2
@@ -126,6 +130,21 @@ def test_run_baseline_training_writes_metrics_json(tmp_path: Path) -> None:
     assert 0.0 <= epoch_result["val_accuracy"] <= 1.0
     assert "accuracy" in epoch_result["val_metrics"]
     assert "confusion_matrix" in metrics_json["final_validation_metrics"]
+    assert list(validation_predictions.columns) == [
+        "id_code",
+        "image_path",
+        "true_label",
+        "predicted_label",
+        "probability_class_0",
+        "probability_class_1",
+        "confidence",
+        "is_correct",
+    ]
+    assert len(validation_predictions) == 2
+    assert set(validation_predictions["id_code"]) == {"sample_c", "sample_d"}
+    assert validation_predictions["probability_class_0"].between(0.0, 1.0).all()
+    assert validation_predictions["probability_class_1"].between(0.0, 1.0).all()
+    assert validation_predictions["confidence"].between(0.0, 1.0).all()
 
     train_batch_record = metrics_json["batch_history"]["train"][0]
     validation_batch_record = metrics_json["batch_history"]["validation"][0]

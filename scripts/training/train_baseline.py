@@ -64,6 +64,48 @@ def _require_split_column(metadata: pd.DataFrame) -> None:
         raise ValueError("Prepared metadata CSV must contain a 'split' column.")
 
 
+def _write_validation_predictions_csv(
+    validation_result: dict[str, Any],
+    output_path: Path,
+) -> None:
+    """Write per-example validation predictions to CSV."""
+
+    probabilities = validation_result.get("probabilities")
+    if not isinstance(probabilities, torch.Tensor):
+        raise ValueError("Validation result does not contain probability tensors.")
+
+    if probabilities.ndim != 2 or probabilities.shape[1] != 2:
+        raise ValueError(
+            "validation_predictions.csv currently supports binary classification outputs only."
+        )
+
+    labels = validation_result["labels"]
+    predictions = validation_result["predictions"]
+    image_paths = validation_result.get("image_paths")
+    id_codes = validation_result.get("id_codes")
+
+    if not isinstance(labels, torch.Tensor) or not isinstance(predictions, torch.Tensor):
+        raise ValueError("Validation result is missing label or prediction tensors.")
+
+    if not isinstance(image_paths, list) or not isinstance(id_codes, list):
+        raise ValueError("Validation result is missing image path or id_code values.")
+
+    confidence = torch.max(probabilities, dim=1).values
+    dataframe = pd.DataFrame(
+        {
+            "id_code": id_codes,
+            "image_path": image_paths,
+            "true_label": labels.tolist(),
+            "predicted_label": predictions.tolist(),
+            "probability_class_0": probabilities[:, 0].tolist(),
+            "probability_class_1": probabilities[:, 1].tolist(),
+            "confidence": confidence.tolist(),
+            "is_correct": (predictions == labels).tolist(),
+        }
+    )
+    dataframe.to_csv(output_path, index=False)
+
+
 def _build_model(
     model_type: str,
     num_classes: int,
@@ -209,6 +251,7 @@ def run_baseline_training(
         "train": [],
         "validation": [],
     }
+    final_validation_result: dict[str, Any] | None = None
 
     for epoch_index in range(epochs):
         epoch_number = epoch_index + 1
@@ -230,6 +273,7 @@ def run_baseline_training(
             progress_description=f"Val epoch {epoch_number}/{epochs}",
             include_batch_history=save_batch_history,
         )
+        final_validation_result = validation_result
 
         validation_metrics = validation_result["metrics"]
         epoch_result = {
@@ -287,6 +331,16 @@ def run_baseline_training(
 
     if save_batch_history:
         final_result["batch_history"] = batch_history
+
+    if final_validation_result is None:
+        raise RuntimeError("Validation result was not produced during training.")
+
+    validation_predictions_path = output_dir_path / "validation_predictions.csv"
+    _write_validation_predictions_csv(
+        validation_result=final_validation_result,
+        output_path=validation_predictions_path,
+    )
+    final_result["validation_predictions_path"] = str(validation_predictions_path)
 
     metrics_path = output_dir_path / "metrics.json"
     metrics_path.write_text(
