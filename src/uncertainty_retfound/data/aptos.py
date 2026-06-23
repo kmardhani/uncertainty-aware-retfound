@@ -1,10 +1,21 @@
-"""APTOS 2019 dataset metadata and image validation utilities."""
+"""APTOS 2019 dataset metadata, image validation, and dataset utilities."""
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+from PIL import Image
 
 import pandas as pd
+
+try:
+    from torch.utils.data import Dataset as TorchDataset
+except ImportError:  # pragma: no cover - exercised when torch is not installed.
+    class TorchDataset:
+        """Lightweight fallback until the project adds PyTorch."""
+
+        # TODO: Inherit from torch.utils.data.Dataset once torch is a project dependency.
+        pass
 
 
 @dataclass(frozen=True)
@@ -24,6 +35,19 @@ class AptosImageValidationSummary:
     def all_images_found(self) -> bool:
         """Return True when every metadata row resolves to an existing image."""
         return self.missing_image_count == 0
+
+
+def load_prepared_aptos_metadata(metadata: pd.DataFrame | str | Path) -> pd.DataFrame:
+    """Load prepared APTOS metadata from a dataframe or CSV path."""
+
+    if isinstance(metadata, pd.DataFrame):
+        return metadata.copy()
+
+    metadata_path = Path(metadata)
+    if not metadata_path.exists():
+        raise FileNotFoundError(f"Prepared metadata CSV not found: {metadata_path}")
+
+    return pd.read_csv(metadata_path)
 
 
 def load_aptos_metadata(
@@ -255,3 +279,82 @@ def validate_aptos_image_paths(
         id_column=resolved_id_column,
         extension=extension if extension.startswith(".") else f".{extension}",
     )
+
+
+class APTOSDataset(TorchDataset):
+    """Small APTOS dataset wrapper for prepared metadata rows."""
+
+    def __init__(
+        self,
+        metadata: pd.DataFrame | str | Path,
+        image_root: str | Path,
+        id_column: str = "id_code",
+        label_column: str = "label",
+        image_extension: str = ".png",
+        transform: Callable[[Image.Image], Any] | None = None,
+        validate_paths: bool = True,
+    ) -> None:
+        self.id_column = id_column
+        self.label_column = label_column
+        self.image_root = Path(image_root)
+        self.image_extension = (
+            image_extension if image_extension.startswith(".") else f".{image_extension}"
+        )
+        self.transform = transform
+
+        loaded_metadata = load_prepared_aptos_metadata(metadata)
+
+        if self.id_column not in loaded_metadata.columns:
+            raise KeyError(
+                f"APTOS metadata is missing image ID column: {self.id_column}. "
+                f"Available columns: {list(loaded_metadata.columns)}"
+            )
+
+        if self.label_column not in loaded_metadata.columns:
+            raise KeyError(
+                f"APTOS metadata is missing label column: {self.label_column}. "
+                f"Available columns: {list(loaded_metadata.columns)}"
+            )
+
+        self.metadata = resolve_aptos_image_paths(
+            loaded_metadata,
+            image_root=self.image_root,
+            id_column=self.id_column,
+            extension=self.image_extension,
+        )
+
+        if validate_paths:
+            summary = validate_aptos_image_paths(
+                self.metadata,
+                image_root=self.image_root,
+                id_column=self.id_column,
+                extension=self.image_extension,
+                max_missing_to_show=5,
+            )
+            if not summary.all_images_found:
+                raise FileNotFoundError(
+                    "APTOS dataset is missing image files. "
+                    f"Missing {summary.missing_image_count} of {summary.total_rows}. "
+                    f"Examples: {summary.missing_image_paths}"
+                )
+
+    def __len__(self) -> int:
+        return len(self.metadata)
+
+    def __getitem__(self, index: int) -> dict[str, Any]:
+        row = self.metadata.iloc[index]
+        image_path = Path(str(row["image_path"]))
+
+        with Image.open(image_path) as image:
+            rgb_image = image.convert("RGB")
+
+        image_output: Any = rgb_image
+        if self.transform is not None:
+            image_output = self.transform(rgb_image)
+
+        return {
+            "image": image_output,
+            "label": row[self.label_column],
+            "image_path": str(image_path),
+            "id_code": str(row[self.id_column]),
+        }
