@@ -8,15 +8,6 @@ from PIL import Image
 
 import pandas as pd
 
-try:
-    from torch.utils.data import Dataset as TorchDataset
-except ImportError:  # pragma: no cover - exercised when torch is not installed.
-    class TorchDataset:
-        """Lightweight fallback until the project adds PyTorch."""
-
-        # TODO: Inherit from torch.utils.data.Dataset once torch is a project dependency.
-        pass
-
 
 @dataclass(frozen=True)
 class AptosImageValidationSummary:
@@ -141,7 +132,7 @@ def _resolve_repo_relative_path(
     if path.is_absolute():
         return path
 
-    candidate_paths = [Path.cwd() / path]
+    candidate_paths: list[Path] = [Path.cwd() / path]
     if config_path is not None:
         candidate_paths.append(Path(config_path).resolve().parent / path)
 
@@ -195,7 +186,10 @@ def infer_aptos_image_id_column(
 ) -> str:
     """Infer the metadata column that stores the APTOS image identifier."""
 
-    candidate_columns = [preferred_column, "image_id", "id_code"]
+    candidate_columns: list[str] = []
+    if preferred_column is not None:
+        candidate_columns.append(preferred_column)
+    candidate_columns.extend(["image_id", "id_code"])
 
     for column in candidate_columns:
         if column and column in metadata.columns:
@@ -259,10 +253,10 @@ def validate_aptos_image_paths(
     exists_mask = image_paths.map(Path.exists)
     missing_metadata = resolved_metadata.loc[~exists_mask]
 
-    missing_image_ids = (
+    missing_image_ids: list[str] = (
         missing_metadata[resolved_id_column].astype(str).head(max_missing_to_show).tolist()
     )
-    missing_image_paths = (
+    missing_image_paths: list[str] = (
         missing_metadata["image_path"].astype(str).head(max_missing_to_show).tolist()
     )
 
@@ -281,8 +275,12 @@ def validate_aptos_image_paths(
     )
 
 
-class APTOSDataset(TorchDataset):
-    """Small APTOS dataset wrapper for prepared metadata rows."""
+class APTOSDataset:
+    """Small APTOS dataset wrapper for prepared metadata rows.
+
+    TODO: Inherit from ``torch.utils.data.Dataset`` once torch is a declared
+    project dependency.
+    """
 
     def __init__(
         self,
