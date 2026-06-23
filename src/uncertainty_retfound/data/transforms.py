@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from typing import Any, Callable, Sequence
 
 from PIL import Image
+from torchvision import transforms as tv_transforms
 
 ImageTransform = Callable[[Image.Image], Image.Image]
+TorchvisionTransform = Callable[[Image.Image], Any]
 
 
 def _normalize_size(size: int | tuple[int, int]) -> tuple[int, int]:
@@ -96,3 +98,28 @@ def build_transform_from_config(config: dict[str, Any]) -> ImageTransform:
         transforms.append(CenterCropImage(config["center_crop"]))
 
     return ComposeTransforms(transforms)
+
+
+def build_torchvision_transform_from_config(
+    config: dict[str, Any],
+) -> TorchvisionTransform:
+    """Build a minimal torchvision preprocessing pipeline from config."""
+
+    transforms: list[Callable[[Any], Any]] = []
+
+    if "resize" in config and config["resize"] is not None:
+        transforms.append(tv_transforms.Resize(config["resize"]))
+
+    if "center_crop" in config and config["center_crop"] is not None:
+        transforms.append(tv_transforms.CenterCrop(config["center_crop"]))
+
+    if config.get("to_tensor", False):
+        transforms.append(tv_transforms.ToTensor())
+
+    normalize_config = config.get("normalize")
+    if normalize_config is not None:
+        mean = normalize_config["mean"]
+        std = normalize_config["std"]
+        transforms.append(tv_transforms.Normalize(mean=mean, std=std))
+
+    return tv_transforms.Compose(transforms)

@@ -5,8 +5,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PIL import Image
-
 import pandas as pd
+from torch.utils.data import Dataset
 
 
 @dataclass(frozen=True)
@@ -275,12 +275,8 @@ def validate_aptos_image_paths(
     )
 
 
-class APTOSDataset:
-    """Small APTOS dataset wrapper for prepared metadata rows.
-
-    TODO: Inherit from ``torch.utils.data.Dataset`` once torch is a declared
-    project dependency.
-    """
+class APTOSDataset(Dataset[dict[str, Any]]):
+    """Small APTOS dataset wrapper for prepared metadata rows."""
 
     def __init__(
         self,
