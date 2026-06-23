@@ -81,6 +81,8 @@ def run_baseline_training(
     id_column: str = "id_code",
     label_column: str = "label",
     image_extension: str = ".png",
+    show_progress: bool = True,
+    save_batch_history: bool = True,
 ) -> dict[str, Any]:
     """Run a baseline training experiment and write JSON metrics."""
 
@@ -156,24 +158,35 @@ def run_baseline_training(
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     epoch_results: list[dict[str, Any]] = []
+    batch_history: dict[str, list[dict[str, float | int]]] = {
+        "train": [],
+        "validation": [],
+    }
 
     for epoch_index in range(epochs):
+        epoch_number = epoch_index + 1
         train_result = train_one_epoch(
             model=model,
             dataloader=train_dataloader,
             optimizer=optimizer,
             device=resolved_device,
+            show_progress=show_progress,
+            progress_description=f"Train epoch {epoch_number}/{epochs}",
+            include_batch_history=save_batch_history,
         )
         validation_result = evaluate_model(
             model=model,
             dataloader=val_dataloader,
             device=resolved_device,
             include_metrics=True,
+            show_progress=show_progress,
+            progress_description=f"Val epoch {epoch_number}/{epochs}",
+            include_batch_history=save_batch_history,
         )
 
         validation_metrics = validation_result["metrics"]
         epoch_result = {
-            "epoch": epoch_index + 1,
+            "epoch": epoch_number,
             "train_loss": float(train_result["loss"]),
             "val_loss": float(validation_result["loss"]),
             "val_accuracy": float(validation_metrics["accuracy"]),
@@ -181,8 +194,20 @@ def run_baseline_training(
         }
         epoch_results.append(epoch_result)
 
+        if save_batch_history:
+            train_batch_history = train_result.get("batch_history", [])
+            validation_batch_history = validation_result.get("batch_history", [])
+
+            batch_history["train"].extend(
+                {"epoch": epoch_number, **batch_record} for batch_record in train_batch_history
+            )
+            batch_history["validation"].extend(
+                {"epoch": epoch_number, **batch_record}
+                for batch_record in validation_batch_history
+            )
+
         print(
-            f"Epoch {epoch_index + 1}/{epochs} "
+            f"Epoch {epoch_number}/{epochs} "
             f"train_loss={epoch_result['train_loss']:.4f} "
             f"val_loss={epoch_result['val_loss']:.4f} "
             f"val_accuracy={epoch_result['val_accuracy']:.4f}"
@@ -202,6 +227,9 @@ def run_baseline_training(
         "epoch_results": epoch_results,
         "final_validation_metrics": epoch_results[-1]["val_metrics"],
     }
+
+    if save_batch_history:
+        final_result["batch_history"] = batch_history
 
     metrics_path = output_dir_path / "metrics.json"
     metrics_path.write_text(
@@ -234,6 +262,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--id-column", type=str, default="id_code")
     parser.add_argument("--label-column", type=str, default="label")
     parser.add_argument("--image-extension", type=str, default=".png")
+    parser.add_argument("--no-progress", action="store_true")
+    parser.add_argument("--no-save-batch-history", action="store_true")
     return parser.parse_args()
 
 
@@ -259,6 +289,8 @@ def main() -> None:
         id_column=args.id_column,
         label_column=args.label_column,
         image_extension=args.image_extension,
+        show_progress=not args.no_progress,
+        save_batch_history=not args.no_save_batch_history,
     )
     print(f"Saved metrics to: {result['metrics_path']}")
 

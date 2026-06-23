@@ -11,11 +11,13 @@ dependencies = [
     "scikit-learn>=1.9.0",
     "torch>=2.5.1",
     "torchvision>=0.20.1",
+    "tqdm>=4.68.3",
 ]
 
 [dependency-groups]
 dev = [
     "ipykernel>=7.3.0",
+    "kaggle>=2.2.2",
     "pytest>=9.1.1",
     "ruff>=0.15.18",
 ]
