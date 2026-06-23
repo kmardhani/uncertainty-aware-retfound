@@ -121,3 +121,121 @@ inside the requested output directory.
 The metrics file records the input paths, training configuration, per-epoch training loss, per-epoch validation loss, validation accuracy when available, and final validation metrics where practical.
 
 This provides the first reproducible experiment command for the project. It is intentionally limited to the small CNN baseline and does not include RETFound, checkpointing, calibration metrics, uncertainty metrics, or experiment tracking frameworks yet.
+
+## Staged RETFound Linear Baseline Interface
+
+The project now includes a staged RETFound-style model boundary implemented in:
+
+    src/uncertainty_retfound/models/retfound.py
+
+This milestone does not yet load real RETFound weights. Instead, it establishes the tested interface that will support the real RETFound baseline in the next implementation phase.
+
+### Implemented Components
+
+The main implemented model abstraction is:
+
+    FrozenEncoderClassifier
+
+This model wraps an arbitrary encoder and adds a trainable linear classification head.
+
+It supports:
+
+    frozen encoder parameters by default
+    optional unfrozen encoder parameters
+    2D encoder feature outputs
+    3D token outputs using the CLS token
+    dictionary outputs with features
+    dictionary outputs with pooler_output
+    dictionary outputs with last_hidden_state
+    tuple/list outputs where the first item contains features
+    clear errors for unsupported encoder outputs
+    clear errors for feature-dimension mismatches
+
+This makes the classifier compatible with a RETFound-style encoder while still allowing tests to use small fake encoders.
+
+### Checkpoint Boundary
+
+The project also includes a staged checkpoint entry point:
+
+    build_retfound_linear_classifier
+
+This function validates that a local checkpoint path exists, but intentionally raises `NotImplementedError` for actual RETFound architecture loading.
+
+This is deliberate. The project does not yet claim to support real RETFound checkpoint loading.
+
+Actual RETFound support still requires adding a compatible ViT/MAE architecture path, such as:
+
+    official RETFound/MAE architecture code
+    compatible timm ViT backend
+    compatible Hugging Face/timm conversion path
+
+The implementation intentionally does not auto-download RETFound weights.
+
+### CLI Integration
+
+The baseline training CLI now supports model selection:
+
+    --model-type small_cnn
+    --model-type retfound_linear
+
+The default remains:
+
+    --model-type small_cnn
+
+Therefore, the existing cluster baseline command remains backward compatible.
+
+For the staged RETFound path, the CLI supports:
+
+    --backbone-checkpoint
+    --feature-dim
+    --freeze-encoder
+    --unfreeze-encoder
+
+At this stage, `retfound_linear` validates checkpoint-path requirements and then fails clearly because real RETFound architecture loading is not implemented yet.
+
+### Testing
+
+The staged interface is covered by tests using fake encoders. These tests verify:
+
+    output logits have the expected shape
+    encoder freezing works
+    encoder unfreezing works
+    2D tensor encoder outputs work
+    3D token encoder outputs work
+    dictionary feature outputs work
+    last_hidden_state outputs work
+    tuple/list outputs work
+    unsupported outputs raise clear errors
+    CLI model-selection behavior remains backward compatible
+
+The full test suite passed with:
+
+    66 passed
+
+### Interpretation
+
+This milestone creates the model abstraction and CLI boundary needed for the real RETFound baseline, but it should not be described as a completed RETFound experiment.
+
+Completed:
+
+    frozen encoder + linear head abstraction
+    model-selection support in the training CLI
+    local checkpoint-path validation
+    fake-encoder tests
+
+Not completed yet:
+
+    real RETFound architecture loading
+    real RETFound checkpoint compatibility
+    real RETFound training on APTOS
+    RETFound calibration or uncertainty evaluation
+
+### Next Step
+
+The next technical milestone is to add actual RETFound architecture/checkpoint loading support.
+
+The recommended implementation direction is to keep the checkpoint local and explicit:
+
+    --backbone-checkpoint /path/to/retfound_weights.pth
+
+This keeps large model weights out of Git and avoids hidden automatic downloads.

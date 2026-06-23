@@ -452,3 +452,78 @@ Move from the tiny CNN infrastructure baseline to the real project baseline:
     later calibration and uncertainty metrics
 
 The tiny CNN baseline should be treated as an infrastructure smoke baseline, not the main model baseline for the research project.
+
+## Model Infrastructure: Staged RETFound Linear Baseline Interface
+
+**Date:** 2026-06-23  
+**Status:** Completed  
+**Related commit:**
+- `759b8ef` Add staged RETFound linear baseline interface
+
+### Objective
+
+Add a tested model boundary for the future RETFound frozen-encoder baseline without requiring real RETFound weights during local development or CI.
+
+The goal was to prepare the codebase for the real project baseline:
+
+    RETFound frozen encoder
+    trainable linear classification head
+    referable DR classification
+
+### Scope
+
+This milestone added:
+
+    FrozenEncoderClassifier
+    RETFound-style checkpoint-path entry point
+    model selection in the baseline training CLI
+    CLI support for retfound_linear
+    tests using fake encoders
+
+### Implemented Behavior
+
+The `FrozenEncoderClassifier` supports several common encoder output formats:
+
+    2D tensor features
+    3D token features using the CLS token
+    dictionaries with features
+    dictionaries with pooler_output
+    dictionaries with last_hidden_state
+    tuple/list outputs using the first element
+
+The classifier freezes encoder parameters by default and adds a trainable linear head.
+
+The staged RETFound builder validates that a checkpoint path exists, but intentionally raises `NotImplementedError` for real RETFound architecture loading.
+
+### Validation
+
+The full test suite passed with:
+
+    66 passed
+
+The tests cover:
+
+    output shape
+    frozen encoder behavior
+    unfrozen encoder behavior
+    supported encoder output formats
+    unsupported output errors
+    feature-dimension mismatch errors
+    CLI backward compatibility with small_cnn
+    clear failure behavior for staged retfound_linear path
+
+### Notes
+
+This is a staged interface milestone, not a completed RETFound experiment.
+
+The project still does not load actual RETFound weights.
+
+Real RETFound support still requires adding a compatible architecture/checkpoint-loading path.
+
+### Next Steps
+
+    decide on RETFound architecture-loading strategy
+    add real RETFound checkpoint loading support
+    keep checkpoint files outside Git
+    run RETFound frozen-encoder smoke experiment on the cluster
+    compare RETFound deterministic baseline against later uncertainty-aware methods
