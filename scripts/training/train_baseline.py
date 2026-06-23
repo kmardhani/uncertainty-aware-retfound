@@ -16,6 +16,7 @@ from uncertainty_retfound.data.dataloaders import create_dataloader
 from uncertainty_retfound.data.transforms import build_torchvision_transform_from_config
 from uncertainty_retfound.evaluation.loops import evaluate_model
 from uncertainty_retfound.models.baseline import SmallCNNClassifier
+from uncertainty_retfound.models.retfound import build_retfound_linear_classifier
 from uncertainty_retfound.training.loops import train_one_epoch
 
 
@@ -63,6 +64,34 @@ def _require_split_column(metadata: pd.DataFrame) -> None:
         raise ValueError("Prepared metadata CSV must contain a 'split' column.")
 
 
+def _build_model(
+    model_type: str,
+    num_classes: int,
+    backbone_checkpoint: str | Path | None,
+    feature_dim: int,
+    freeze_encoder: bool,
+) -> torch.nn.Module:
+    """Build the requested classifier model."""
+
+    if model_type == "small_cnn":
+        return SmallCNNClassifier(num_classes=num_classes)
+
+    if model_type == "retfound_linear":
+        if backbone_checkpoint is None:
+            raise ValueError(
+                "backbone_checkpoint is required when model_type='retfound_linear'."
+            )
+
+        return build_retfound_linear_classifier(
+            checkpoint_path=backbone_checkpoint,
+            num_classes=num_classes,
+            feature_dim=feature_dim,
+            freeze_encoder=freeze_encoder,
+        )
+
+    raise ValueError(f"Unsupported model_type: {model_type}")
+
+
 def run_baseline_training(
     metadata_csv: str | Path,
     image_root: str | Path,
@@ -83,6 +112,10 @@ def run_baseline_training(
     image_extension: str = ".png",
     show_progress: bool = True,
     save_batch_history: bool = True,
+    model_type: str = "small_cnn",
+    backbone_checkpoint: str | Path | None = None,
+    feature_dim: int = 1024,
+    freeze_encoder: bool = True,
 ) -> dict[str, Any]:
     """Run a baseline training experiment and write JSON metrics."""
 
@@ -154,7 +187,13 @@ def run_baseline_training(
         pin_memory=pin_memory,
     )
 
-    model = SmallCNNClassifier(num_classes=num_classes)
+    model = _build_model(
+        model_type=model_type,
+        num_classes=num_classes,
+        backbone_checkpoint=backbone_checkpoint,
+        feature_dim=feature_dim,
+        freeze_encoder=freeze_encoder,
+    )
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     epoch_results: list[dict[str, Any]] = []
@@ -224,9 +263,17 @@ def run_baseline_training(
         "train_split": train_split,
         "validation_split": val_split,
         "device": str(resolved_device),
+        "model_type": model_type,
         "epoch_results": epoch_results,
         "final_validation_metrics": epoch_results[-1]["val_metrics"],
     }
+
+    if backbone_checkpoint is not None:
+        final_result["backbone_checkpoint"] = str(backbone_checkpoint)
+
+    if model_type == "retfound_linear":
+        final_result["feature_dim"] = int(feature_dim)
+        final_result["freeze_encoder"] = bool(freeze_encoder)
 
     if save_batch_history:
         final_result["batch_history"] = batch_history
@@ -262,6 +309,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--id-column", type=str, default="id_code")
     parser.add_argument("--label-column", type=str, default="label")
     parser.add_argument("--image-extension", type=str, default=".png")
+    parser.add_argument(
+        "--model-type",
+        type=str,
+        choices=("small_cnn", "retfound_linear"),
+        default="small_cnn",
+    )
+    parser.add_argument("--backbone-checkpoint", type=Path, default=None)
+    parser.add_argument("--feature-dim", type=int, default=1024)
+    parser.add_argument("--freeze-encoder", dest="freeze_encoder", action="store_true")
+    parser.add_argument("--unfreeze-encoder", dest="freeze_encoder", action="store_false")
+    parser.set_defaults(freeze_encoder=True)
     parser.add_argument("--no-progress", action="store_true")
     parser.add_argument("--no-save-batch-history", action="store_true")
     return parser.parse_args()
@@ -291,6 +349,10 @@ def main() -> None:
         image_extension=args.image_extension,
         show_progress=not args.no_progress,
         save_batch_history=not args.no_save_batch_history,
+        model_type=args.model_type,
+        backbone_checkpoint=args.backbone_checkpoint,
+        feature_dim=args.feature_dim,
+        freeze_encoder=args.freeze_encoder,
     )
     print(f"Saved metrics to: {result['metrics_path']}")
 

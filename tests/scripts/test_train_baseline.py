@@ -54,6 +54,7 @@ def test_run_baseline_training_writes_metrics_json(tmp_path: Path) -> None:
         num_workers=0,
         seed=42,
         show_progress=False,
+        model_type="small_cnn",
     )
 
     metrics_path = output_dir / "metrics.json"
@@ -210,3 +211,66 @@ def test_run_baseline_training_can_disable_batch_history(tmp_path: Path) -> None
 
     assert "batch_history" not in metrics_json
     assert "batch_history" not in result
+
+
+def test_run_baseline_training_requires_checkpoint_for_retfound_model(
+    tmp_path: Path,
+) -> None:
+    metadata = _make_metadata()
+    metadata_path = tmp_path / "prepared_metadata.csv"
+    image_root = tmp_path / "train_images"
+
+    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
+    metadata.to_csv(metadata_path, index=False)
+
+    with pytest.raises(ValueError, match="backbone_checkpoint is required"):
+        run_baseline_training(
+            metadata_csv=metadata_path,
+            image_root=image_root,
+            output_dir=tmp_path / "outputs",
+            num_classes=2,
+            epochs=1,
+            batch_size=2,
+            learning_rate=1e-3,
+            resize=32,
+            center_crop=32,
+            num_workers=0,
+            seed=42,
+            show_progress=False,
+            model_type="retfound_linear",
+        )
+
+
+def test_run_baseline_training_retfound_model_rejects_missing_checkpoint(
+    tmp_path: Path,
+) -> None:
+    metadata = _make_metadata()
+    metadata_path = tmp_path / "prepared_metadata.csv"
+    image_root = tmp_path / "train_images"
+
+    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
+    metadata.to_csv(metadata_path, index=False)
+
+    with pytest.raises(FileNotFoundError, match="checkpoint not found"):
+        run_baseline_training(
+            metadata_csv=metadata_path,
+            image_root=image_root,
+            output_dir=tmp_path / "outputs",
+            num_classes=2,
+            epochs=1,
+            batch_size=2,
+            learning_rate=1e-3,
+            resize=32,
+            center_crop=32,
+            num_workers=0,
+            seed=42,
+            show_progress=False,
+            model_type="retfound_linear",
+            backbone_checkpoint=tmp_path / "missing_checkpoint.pth",
+        )
