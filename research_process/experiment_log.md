@@ -108,3 +108,46 @@ The dataset wrapper was added to:
 ```text
 
 src/uncertainty_retfound/data/aptos.py
+```
+
+## Experiment: APTOS Image Preprocessing Transform Smoke Test
+
+**Date:** 2026-06-22  
+
+**Status:** Completed  
+
+**Related commits:**
+
+- `8d1d4ce` Add APTOS image preprocessing transforms
+
+- `1174820` Fixed static validation errors
+
+### Objective
+
+Validate a small, deterministic image preprocessing layer for APTOS images before introducing PyTorch, torchvision, RETFound, or model training code.
+
+This step ensures that image preprocessing behavior is explicit, testable, and compatible with the existing `APTOSDataset` transform interface.
+
+### Scope
+
+The preprocessing layer supports:
+
+1. Ensuring images are in RGB mode.
+
+2. Resizing images to a square or rectangular target size.
+
+3. Center-cropping images to a square or rectangular target size.
+
+4. Composing multiple transforms in order.
+
+5. Building a simple transform pipeline from configuration.
+
+6. Passing transforms into `APTOSDataset`.
+
+### Implementation
+
+The transform utilities were added to:
+
+```text
+
+src/uncertainty_retfound/data/transforms.py

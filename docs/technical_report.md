@@ -1,7 +1,3 @@
-
-
-```markdown
-
 ## Dataset Preparation Pipeline
 
 The project now includes an initial metadata preparation pipeline for the APTOS 2019 diabetic retinopathy dataset. This pipeline is designed to create reproducible experiment metadata before model training or RETFound integration begins.
@@ -38,3 +34,15 @@ The implementation is located in:
 ```text
 
 src/uncertainty_retfound/data/aptos.py
+```
+
+## APTOS Image Preprocessing Transforms
+
+The project now includes a small image preprocessing layer for APTOS retinal images. This layer is intentionally lightweight and uses Pillow only. It is designed to work with the existing `APTOSDataset` transform interface before PyTorch, torchvision, or RETFound integration is introduced.
+
+The implementation is located in:
+
+```text
+
+src/uncertainty_retfound/data/transforms.py
+```

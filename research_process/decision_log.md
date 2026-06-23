@@ -179,11 +179,40 @@ Add an `APTOSDataset` wrapper that supports dataframe or CSV metadata input, res
 The dataset currently returns dictionaries containing:
 
 ```text
-
 image
-
 label
-
 image_path
-
 id_code
+```
+
+## Decision: Add Pillow-Based Image Transforms Before PyTorch Integration
+
+**Date:** 2026-06-22  
+
+**Status:** Accepted
+
+### Context
+
+The project now has metadata preparation, image path validation, and a lightweight APTOS dataset wrapper. The next requirement is image preprocessing.
+
+However, the project is not yet ready for full PyTorch, torchvision, RETFound, or training-loop integration.
+
+### Decision
+
+Add a small Pillow-based preprocessing layer that works with the existing `APTOSDataset` transform interface.
+
+The preprocessing layer includes:
+
+```text
+
+EnsureRGB
+
+ResizeImage
+
+CenterCropImage
+
+ComposeTransforms
+
+build_transform_from_config
+```
+
