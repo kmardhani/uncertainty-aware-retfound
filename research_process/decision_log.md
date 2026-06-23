@@ -93,3 +93,35 @@ This strategy also supports faster experimentation. Once embeddings are extracte
 ### Status
 
 Accepted.
+
+## Decision 004 - Use a Tested Metadata Preparation Script Before Model Integration
+
+**Date:** 2026-06-22  
+
+**Status:** Accepted
+
+### Context
+
+The project is moving from repository scaffolding into dataset preparation for APTOS 2019 diabetic retinopathy classification. Before integrating RETFound or uncertainty-aware model components, the project needs a reliable and reproducible way to prepare metadata for experiments.
+
+The initial dataset preparation workflow needs to support:
+
+- Loading a dataset YAML configuration.
+
+- Loading APTOS metadata from CSV.
+
+- Applying task-specific label mappings.
+
+- Generating train/validation/test splits.
+
+- Saving split metadata for later training and evaluation.
+
+- Testing the workflow with fixture data.
+
+### Decision
+
+Create a dedicated script:
+
+```text
+
+scripts/data/prepare_aptos_metadata.py
