@@ -634,3 +634,87 @@ The five-epoch frozen RETFound linear baseline reached a strong validation accur
 At epoch 3, the model had `24` false negatives for class 1. By epoch 5, this dropped to `8` false negatives, while the overall accuracy remained high. This suggests the final model is better aligned with a screening-oriented objective, where missing referable disease is typically more concerning than producing additional false positives.
 
 This run establishes a strong frozen foundation-model baseline. Future work should add threshold-aware metrics, sensitivity/recall, specificity, AUC, F1, calibration metrics, and uncertainty-aware evaluation.
+
+## Five-epoch RETFound linear baseline with classification and calibration metrics
+
+This run repeats the five-epoch frozen RETFound linear baseline after adding richer binary classification metrics, calibration metrics, and validation prediction export.
+
+### Configuration
+
+- Model type: `retfound_linear`
+- External RETFound repo path on cluster: `/home/karim/external/RETFound_MAE`
+- Checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
+- Architecture: `RETFound_mae`
+- Feature dimension: `1024`
+- Dataset: APTOS 2019 referable diabetic retinopathy
+- Train split: `2,930` examples
+- Validation split: `366` examples
+- Number of classes: `2`
+- Epochs: `5`
+- Batch size: `8`
+- Learning rate: `0.001`
+- Resize / center crop: `224`
+- Device: `cuda`
+- Output directory: `outputs/retfound_linear_referable_dr_5epoch_metrics_predictions`
+- Validation prediction export: `validation_predictions.csv`
+
+### Results by epoch
+
+| Epoch | Train loss | Val loss | Accuracy | AUC | Precision | Recall / Sensitivity | Specificity | F1 | Balanced accuracy | Brier | NLL | ECE | Mean confidence | Mean positive probability |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.4263 | 0.3519 | 0.8361 | 0.9301 | 0.7500 | 0.9156 | 0.7783 | 0.8246 | 0.8469 | 0.1099 | 0.3519 | 0.0493 | 0.8068 | 0.4593 |
+| 2 | 0.3412 | 0.3088 | 0.8607 | 0.9455 | 0.7910 | 0.9091 | 0.8255 | 0.8459 | 0.8673 | 0.0931 | 0.3088 | 0.0565 | 0.8263 | 0.4411 |
+| 3 | 0.3148 | 0.2908 | 0.8934 | 0.9538 | 0.8966 | 0.8442 | 0.9292 | 0.8696 | 0.8867 | 0.0890 | 0.2908 | 0.0601 | 0.8334 | 0.3841 |
+| 4 | 0.2900 | 0.2802 | 0.8770 | 0.9565 | 0.8114 | 0.9221 | 0.8443 | 0.8632 | 0.8832 | 0.0840 | 0.2802 | 0.0542 | 0.8527 | 0.4608 |
+| 5 | 0.2782 | 0.2752 | 0.8852 | 0.9575 | 0.8111 | 0.9481 | 0.8396 | 0.8743 | 0.8938 | 0.0842 | 0.2752 | 0.0213 | 0.8687 | 0.4676 |
+
+### Final validation metrics
+
+- Accuracy: `0.8852459192276001`
+- AUC: `0.957485910316099`
+- Precision: `0.8111111111111111`
+- Recall / sensitivity: `0.948051948051948`
+- Specificity: `0.839622641509434`
+- F1: `0.874251497005988`
+- Balanced accuracy: `0.893837294780691`
+- Brier score: `0.08415580540895462`
+- Negative log likelihood: `0.2751513719558716`
+- Expected calibration error: `0.021337965798508274`
+- Mean confidence: `0.8687123656272888`
+- Mean positive-class probability: `0.46755489706993103`
+- Confusion matrix: `[[178, 34], [8, 146]]`
+- Number of validation examples: `366`
+- Correct predictions: `324`
+- Incorrect predictions: `42`
+
+### Best epochs
+
+- Highest accuracy: epoch 3, validation accuracy `0.8934`
+- Lowest validation loss: epoch 5, validation loss `0.2752`
+- Highest recall / sensitivity: epoch 5, sensitivity `0.9481`
+- Highest balanced accuracy: epoch 5, balanced accuracy `0.8938`
+- Lowest expected calibration error: epoch 5, ECE `0.0213`
+- Highest AUC: epoch 5, AUC `0.9575`
+
+### Interpretation
+
+This run establishes the strongest current softmax linear-head baseline for the project. Although epoch 3 had the highest raw accuracy, epoch 5 is the preferred screening-oriented baseline because it achieved the best sensitivity, balanced accuracy, validation loss, AUC, and calibration error.
+
+The final model made only `8` false-negative predictions for referable diabetic retinopathy, while maintaining high overall validation accuracy and strong AUC. The expected calibration error of approximately `0.0213` is already low, which means future Bayesian or probabilistic heads will need to improve calibration meaningfully without reducing diagnostic performance.
+
+This run is now the main standard softmax-head baseline for future comparisons against temperature scaling and Bayesian last-layer methods.
+
+### Validation predictions
+
+The run produced `validation_predictions.csv` with one row per validation example and the following fields:
+
+- `id_code`
+- `image_path`
+- `true_label`
+- `predicted_label`
+- `probability_class_0`
+- `probability_class_1`
+- `confidence`
+- `is_correct`
+
+This file enables threshold analysis, calibration curves, selective prediction analysis, and high-confidence error analysis.

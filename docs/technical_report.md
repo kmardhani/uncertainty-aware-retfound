@@ -315,3 +315,49 @@ The highest raw validation accuracy occurred at epoch 3:
 - Epoch 3 class 1 accuracy: `0.8442`
 
 Although epoch 3 had the highest overall accuracy, epoch 5 is more clinically relevant for a screening-oriented task because it reduced false negatives from `24` to `8` while maintaining high overall validation accuracy. This highlights why future evaluation should prioritize sensitivity/recall, specificity, AUC, calibration, and uncertainty metrics in addition to accuracy.
+
+## Softmax linear-head baseline with calibration metrics
+
+The current strongest baseline is a frozen RETFound-MAE encoder with a standard softmax linear classification head trained for five epochs on the APTOS 2019 referable diabetic retinopathy task.
+
+### Final epoch metrics
+
+- Accuracy: `0.8852459192276001`
+- AUC: `0.957485910316099`
+- Precision: `0.8111111111111111`
+- Recall / sensitivity: `0.948051948051948`
+- Specificity: `0.839622641509434`
+- F1: `0.874251497005988`
+- Balanced accuracy: `0.893837294780691`
+- Brier score: `0.08415580540895462`
+- Negative log likelihood: `0.2751513719558716`
+- Expected calibration error: `0.021337965798508274`
+- Mean confidence: `0.8687123656272888`
+- Mean positive-class probability: `0.46755489706993103`
+- Confusion matrix: `[[178, 34], [8, 146]]`
+
+### Baseline interpretation
+
+This baseline is strong for a frozen foundation-model linear probe. The final epoch is preferred over the peak-accuracy epoch because it provides a better screening-oriented tradeoff: higher sensitivity, lower validation loss, better balanced accuracy, higher AUC, and lower calibration error.
+
+The result also creates a clear comparison target for future uncertainty-aware methods. A Bayesian or probabilistic last-layer method should aim to preserve the diagnostic performance of this baseline while improving calibration and uncertainty behavior.
+
+### Future comparison criteria
+
+Future Bayesian or calibrated heads should be compared against this softmax baseline using:
+
+- Accuracy
+- AUC
+- Recall / sensitivity
+- Specificity
+- F1
+- Balanced accuracy
+- Brier score
+- Negative log likelihood
+- Expected calibration error
+- Mean confidence
+- High-confidence error rate
+- Uncertainty separation between correct and incorrect predictions
+- Selective prediction behavior
+
+The main research objective is not simply to increase accuracy. The objective is to improve probability quality and uncertainty awareness while maintaining comparable diagnostic performance.
