@@ -585,3 +585,52 @@ This result should be treated as a successful integration and baseline milestone
 ### Next planned experiment
 
 Run a 5-epoch frozen RETFound linear baseline using the same setup to check whether validation performance improves beyond the 1-epoch baseline while preserving strong referable DR sensitivity.
+
+## Five-epoch frozen RETFound linear baseline
+
+This experiment extends the first RETFound linear smoke run to five epochs using the same frozen RETFound-MAE encoder and trainable linear classification head.
+
+### Configuration
+
+- Model type: `retfound_linear`
+- External RETFound repo path on cluster: `/home/karim/external/RETFound_MAE`
+- Checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
+- Architecture: `RETFound_mae`
+- Feature dimension: `1024`
+- Dataset: APTOS 2019 referable diabetic retinopathy
+- Train split: `2,930` examples
+- Validation split: `366` examples
+- Number of classes: `2`
+- Epochs: `5`
+- Batch size: `8`
+- Learning rate: `0.001`
+- Resize / center crop: `224`
+- Device: `cuda`
+- Output directory: `outputs/retfound_linear_referable_dr_5epoch`
+
+### Results by epoch
+
+| Epoch | Train loss | Validation loss | Validation accuracy | Confusion matrix | Class 0 accuracy | Class 1 accuracy |
+|---:|---:|---:|---:|---|---:|---:|
+| 1 | 0.4263 | 0.3519 | 0.8361 | `[[165, 47], [13, 141]]` | 0.7783 | 0.9156 |
+| 2 | 0.3412 | 0.3088 | 0.8607 | `[[175, 37], [14, 140]]` | 0.8255 | 0.9091 |
+| 3 | 0.3148 | 0.2908 | 0.8934 | `[[197, 15], [24, 130]]` | 0.9292 | 0.8442 |
+| 4 | 0.2900 | 0.2802 | 0.8770 | `[[179, 33], [12, 142]]` | 0.8443 | 0.9221 |
+| 5 | 0.2782 | 0.2752 | 0.8852 | `[[178, 34], [8, 146]]` | 0.8396 | 0.9481 |
+
+### Final validation metrics
+
+- Final validation accuracy: `0.8852459192276001`
+- Final validation confusion matrix: `[[178, 34], [8, 146]]`
+- Final class 0 accuracy: `0.839622641509434`
+- Final class 1 accuracy: `0.948051948051948`
+- Train batches: `1835`
+- Validation batches: `230`
+
+### Interpretation
+
+The five-epoch frozen RETFound linear baseline reached a strong validation accuracy of approximately `88.52%` at the final epoch. The highest raw validation accuracy occurred at epoch 3 with approximately `89.34%`, but epoch 5 is more attractive for a medical screening setting because it substantially reduced false negatives for referable diabetic retinopathy.
+
+At epoch 3, the model had `24` false negatives for class 1. By epoch 5, this dropped to `8` false negatives, while the overall accuracy remained high. This suggests the final model is better aligned with a screening-oriented objective, where missing referable disease is typically more concerning than producing additional false positives.
+
+This run establishes a strong frozen foundation-model baseline. Future work should add threshold-aware metrics, sensitivity/recall, specificity, AUC, F1, calibration metrics, and uncertainty-aware evaluation.

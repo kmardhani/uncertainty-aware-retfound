@@ -295,3 +295,23 @@ This result establishes a credible foundation-model baseline and confirms that t
 Future evaluation should not rely on accuracy alone. For medical screening and trustworthy retinal disease classification, the project should also track sensitivity/recall, specificity, AUC, F1, calibration error, Brier score, negative log likelihood, and uncertainty-aware metrics.
 
 The next planned experiment is a 5-epoch frozen RETFound linear baseline using the same setup.
+
+## Five-epoch RETFound linear baseline
+
+A five-epoch frozen RETFound linear baseline was run after the initial one-epoch integration run. The purpose was to determine whether the frozen encoder plus linear head could produce a stronger baseline without unfreezing the foundation model.
+
+### Final result
+
+- Final validation accuracy: `0.8852459192276001`
+- Final validation loss: `0.2752`
+- Final confusion matrix: `[[178, 34], [8, 146]]`
+- Final class 0 accuracy: `0.839622641509434`
+- Final class 1 accuracy: `0.948051948051948`
+
+The highest raw validation accuracy occurred at epoch 3:
+
+- Epoch 3 validation accuracy: `0.8934`
+- Epoch 3 confusion matrix: `[[197, 15], [24, 130]]`
+- Epoch 3 class 1 accuracy: `0.8442`
+
+Although epoch 3 had the highest overall accuracy, epoch 5 is more clinically relevant for a screening-oriented task because it reduced false negatives from `24` to `8` while maintaining high overall validation accuracy. This highlights why future evaluation should prioritize sensitivity/recall, specificity, AUC, calibration, and uncertainty metrics in addition to accuracy.
