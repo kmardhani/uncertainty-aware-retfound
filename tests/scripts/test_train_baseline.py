@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+import torch
 from PIL import Image
 
 from scripts.training.train_baseline import run_baseline_training
@@ -27,6 +28,45 @@ def _make_metadata() -> pd.DataFrame:
             "split": ["train", "train", "val", "val"],
         }
     )
+
+
+def _write_fake_retfound_repo(repo_path: Path) -> None:
+    repo_path.mkdir(parents=True, exist_ok=True)
+    (repo_path / "models_vit.py").write_text(
+        """
+import torch
+from torch import nn
+
+
+class FakeRETFoundEncoder(nn.Module):
+    def __init__(self, feature_dim: int = 8) -> None:
+        super().__init__()
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.proj = nn.Linear(3, feature_dim)
+        self.head = nn.Linear(feature_dim, 3)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        pooled = self.pool(inputs).flatten(1)
+        return self.proj(pooled)
+
+
+def RETFound_mae() -> nn.Module:
+    return FakeRETFoundEncoder(feature_dim=8)
+""".strip(),
+        encoding="utf-8",
+    )
+
+
+def _write_fake_retfound_checkpoint(checkpoint_path: Path) -> None:
+    checkpoint = {
+        "model": {
+            "module.proj.weight": torch.randn(8, 3),
+            "module.proj.bias": torch.randn(8),
+            "module.head.weight": torch.randn(5, 8),
+            "module.head.bias": torch.randn(5),
+        }
+    }
+    torch.save(checkpoint, checkpoint_path)
 
 
 def test_run_baseline_training_writes_metrics_json(tmp_path: Path) -> None:
@@ -257,7 +297,10 @@ def test_run_baseline_training_retfound_model_rejects_missing_checkpoint(
     _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
     metadata.to_csv(metadata_path, index=False)
 
-    with pytest.raises(FileNotFoundError, match="checkpoint not found"):
+    repo_path = tmp_path / "fake_retfound_repo"
+    _write_fake_retfound_repo(repo_path)
+
+    with pytest.raises(ValueError, match="retfound_repo_path is required"):
         run_baseline_training(
             metadata_csv=metadata_path,
             image_root=image_root,
@@ -274,3 +317,89 @@ def test_run_baseline_training_retfound_model_rejects_missing_checkpoint(
             model_type="retfound_linear",
             backbone_checkpoint=tmp_path / "missing_checkpoint.pth",
         )
+
+
+def test_run_baseline_training_retfound_model_rejects_missing_checkpoint_path(
+    tmp_path: Path,
+) -> None:
+    metadata = _make_metadata()
+    metadata_path = tmp_path / "prepared_metadata.csv"
+    image_root = tmp_path / "train_images"
+    repo_path = tmp_path / "fake_retfound_repo"
+
+    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
+    _write_fake_retfound_repo(repo_path)
+    metadata.to_csv(metadata_path, index=False)
+
+    with pytest.raises(FileNotFoundError, match="checkpoint not found"):
+        run_baseline_training(
+            metadata_csv=metadata_path,
+            image_root=image_root,
+            output_dir=tmp_path / "outputs",
+            num_classes=2,
+            epochs=1,
+            batch_size=2,
+            learning_rate=1e-3,
+            resize=32,
+            center_crop=32,
+            num_workers=0,
+            seed=42,
+            show_progress=False,
+            model_type="retfound_linear",
+            backbone_checkpoint=tmp_path / "missing_checkpoint.pth",
+            retfound_repo_path=repo_path,
+        )
+
+
+def test_run_baseline_training_can_use_fake_external_retfound_adapter(
+    tmp_path: Path,
+) -> None:
+    metadata = _make_metadata()
+    metadata_path = tmp_path / "prepared_metadata.csv"
+    image_root = tmp_path / "train_images"
+    output_dir = tmp_path / "outputs"
+    repo_path = tmp_path / "fake_retfound_repo"
+    checkpoint_path = tmp_path / "retfound_checkpoint.pth"
+
+    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
+    _write_fake_retfound_repo(repo_path)
+    _write_fake_retfound_checkpoint(checkpoint_path)
+    metadata.to_csv(metadata_path, index=False)
+
+    result = run_baseline_training(
+        metadata_csv=metadata_path,
+        image_root=image_root,
+        output_dir=output_dir,
+        num_classes=2,
+        epochs=1,
+        batch_size=2,
+        learning_rate=1e-3,
+        resize=32,
+        center_crop=32,
+        num_workers=0,
+        seed=42,
+        show_progress=False,
+        model_type="retfound_linear",
+        backbone_checkpoint=checkpoint_path,
+        retfound_repo_path=repo_path,
+        feature_dim=8,
+    )
+
+    metrics_json = json.loads((output_dir / "metrics.json").read_text(encoding="utf-8"))
+
+    assert result["model_type"] == "retfound_linear"
+    assert metrics_json["model_type"] == "retfound_linear"
+    assert metrics_json["feature_dim"] == 8
+    assert metrics_json["freeze_encoder"] is True
+    assert metrics_json["backbone_checkpoint"] == str(checkpoint_path)
+    assert metrics_json["retfound_repo_path"] == str(repo_path)
+    assert len(metrics_json["epoch_results"]) == 1
+    assert metrics_json["epoch_results"][0]["train_loss"] >= 0.0
+    assert metrics_json["epoch_results"][0]["val_loss"] >= 0.0
+    assert 0.0 <= metrics_json["epoch_results"][0]["val_accuracy"] <= 1.0

@@ -68,6 +68,7 @@ def _build_model(
     model_type: str,
     num_classes: int,
     backbone_checkpoint: str | Path | None,
+    retfound_repo_path: str | Path | None,
     feature_dim: int,
     freeze_encoder: bool,
 ) -> torch.nn.Module:
@@ -81,10 +82,15 @@ def _build_model(
             raise ValueError(
                 "backbone_checkpoint is required when model_type='retfound_linear'."
             )
+        if retfound_repo_path is None:
+            raise ValueError(
+                "retfound_repo_path is required when model_type='retfound_linear'."
+            )
 
         return build_retfound_linear_classifier(
             checkpoint_path=backbone_checkpoint,
             num_classes=num_classes,
+            retfound_repo_path=retfound_repo_path,
             feature_dim=feature_dim,
             freeze_encoder=freeze_encoder,
         )
@@ -114,6 +120,7 @@ def run_baseline_training(
     save_batch_history: bool = True,
     model_type: str = "small_cnn",
     backbone_checkpoint: str | Path | None = None,
+    retfound_repo_path: str | Path | None = None,
     feature_dim: int = 1024,
     freeze_encoder: bool = True,
 ) -> dict[str, Any]:
@@ -191,6 +198,7 @@ def run_baseline_training(
         model_type=model_type,
         num_classes=num_classes,
         backbone_checkpoint=backbone_checkpoint,
+        retfound_repo_path=retfound_repo_path,
         feature_dim=feature_dim,
         freeze_encoder=freeze_encoder,
     )
@@ -270,6 +278,8 @@ def run_baseline_training(
 
     if backbone_checkpoint is not None:
         final_result["backbone_checkpoint"] = str(backbone_checkpoint)
+    if retfound_repo_path is not None:
+        final_result["retfound_repo_path"] = str(retfound_repo_path)
 
     if model_type == "retfound_linear":
         final_result["feature_dim"] = int(feature_dim)
@@ -316,6 +326,7 @@ def parse_args() -> argparse.Namespace:
         default="small_cnn",
     )
     parser.add_argument("--backbone-checkpoint", type=Path, default=None)
+    parser.add_argument("--retfound-repo-path", type=Path, default=None)
     parser.add_argument("--feature-dim", type=int, default=1024)
     parser.add_argument("--freeze-encoder", dest="freeze_encoder", action="store_true")
     parser.add_argument("--unfreeze-encoder", dest="freeze_encoder", action="store_false")
@@ -351,6 +362,7 @@ def main() -> None:
         save_batch_history=not args.no_save_batch_history,
         model_type=args.model_type,
         backbone_checkpoint=args.backbone_checkpoint,
+        retfound_repo_path=args.retfound_repo_path,
         feature_dim=args.feature_dim,
         freeze_encoder=args.freeze_encoder,
     )
