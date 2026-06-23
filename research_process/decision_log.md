@@ -125,3 +125,36 @@ Create a dedicated script:
 ```text
 
 scripts/data/prepare_aptos_metadata.py
+```
+
+## Decision 005 - Validate APTOS Image Paths Before Dataset Class and Model Training
+
+**Date:** 2026-06-22  
+
+**Status:** Accepted
+
+### Context
+
+After implementing metadata preparation for APTOS 2019, the next risk was whether metadata rows could reliably resolve to local retinal image files.
+
+Before adding a PyTorch Dataset class or integrating RETFound, the project needed a lightweight validation step that confirms image file paths exist without loading all images into memory.
+
+### Decision
+
+Add image path resolution and validation functionality before implementing model-facing dataset loading.
+
+The validation workflow checks whether each metadata row resolves to an expected image path and reports:
+
+- Total metadata rows.
+
+- Number of image files found.
+
+- Number of image files missing.
+
+- Missing image identifiers or paths, capped for readability.
+
+A CLI script was added:
+
+```text
+
+scripts/data/validate_aptos_images.py

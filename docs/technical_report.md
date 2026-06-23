@@ -11,3 +11,19 @@ The preparation workflow is implemented in:
 ```text
 
 scripts/data/prepare_aptos_metadata.py
+```
+
+
+## APTOS Image Path Validation
+
+The project now includes lightweight image path validation for the APTOS 2019 dataset. This validation step checks whether metadata rows can be resolved to expected retinal image file paths before model training begins.
+
+The purpose of this stage is to catch missing or misconfigured image paths early, before implementing the PyTorch Dataset class or integrating RETFound.
+
+### Implementation
+
+Image path functionality is implemented in:
+
+```text
+
+src/uncertainty_retfound/data/aptos.py

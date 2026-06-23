@@ -28,3 +28,36 @@ The smoke test used the fixture configuration:
 
 ```text
 configs/datasets/fixtures/aptos2019_sample.yaml
+```
+
+## Experiment: APTOS Image Path Validation Smoke Test
+
+**Date:** 2026-06-22  
+**Status:** Completed  
+**Related commit:**
+- `84487de` Add APTOS image path validation
+
+### Objective
+
+Validate that APTOS metadata rows can be resolved to expected retinal image file paths without loading image pixels into memory.
+
+This step was added before model training to ensure that prepared metadata can be connected to local image files in a reproducible and testable way.
+
+### Scope
+
+The validation workflow checks:
+
+1. Image path construction from metadata rows.
+2. Use of an image root directory.
+3. Use of the configured image identifier column.
+4. Use of the expected image file extension.
+5. Detection of missing image files.
+6. Reporting of found and missing image counts.
+7. CLI behavior for successful and failed validation cases.
+
+### Implementation
+
+Image path resolution and validation functionality was added to:
+
+```text
+src/uncertainty_retfound/data/aptos.py
