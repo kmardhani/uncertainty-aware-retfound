@@ -527,3 +527,61 @@ Real RETFound support still requires adding a compatible architecture/checkpoint
     keep checkpoint files outside Git
     run RETFound frozen-encoder smoke experiment on the cluster
     compare RETFound deterministic baseline against later uncertainty-aware methods
+
+## First real RETFound linear baseline run
+
+This run records the first successful real RETFound baseline on the APTOS 2019 referable diabetic retinopathy task. Unlike the earlier small CNN smoke test, this experiment used a frozen RETFound-MAE encoder with a trainable linear classification head.
+
+### External RETFound setup
+
+- External RETFound repo path on cluster: `/home/karim/external/RETFound_MAE`
+- External RETFound repo remote: `https://github.com/rmaphoh/RETFound_MAE.git`
+- External RETFound repo commit: `ae9a9ecf37857cf47b8aa9f87cd6f710d75db287`
+- Hugging Face checkpoint: `YukunZhou/RETFound_mae_natureCFP`
+- Local checkpoint path on cluster: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
+- Architecture: `RETFound_mae`
+- Feature dimension: `1024`
+- Frozen encoder trainable parameters: `2,050`
+- Total parameters: `303,303,682`
+
+### Command
+
+    uv run python -m scripts.training.train_baseline \
+      --model-type retfound_linear \
+      --retfound-repo-path /home/karim/external/RETFound_MAE \
+      --backbone-checkpoint /home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth \
+      --feature-dim 1024 \
+      --metadata-csv data/processed/aptos2019_referable_dr_metadata_splits.csv \
+      --image-root data/raw/aptos2019/all_images \
+      --output-dir outputs/retfound_linear_referable_dr_smoke \
+      --num-classes 2 \
+      --epochs 1 \
+      --batch-size 8 \
+      --learning-rate 0.001 \
+      --resize 224 \
+      --center-crop 224 \
+      --device cuda
+
+### Results
+
+- Train loss: `0.42631749279873365`
+- Validation loss: `0.3518964662903645`
+- Validation accuracy: `0.8360655903816223`
+- Confusion matrix: `[[165, 47], [13, 141]]`
+- Per-class accuracy:
+  - Class 0: `0.7783018867924528`
+  - Class 1: `0.9155844155844156`
+- Train batches: `367`
+- Validation batches: `46`
+
+### Interpretation
+
+This is the first successful real RETFound baseline for the project. It confirms that the external RETFound repository adapter, gated Hugging Face checkpoint loading, frozen feature extraction path, and linear classification head all work end to end on the cluster.
+
+The run significantly improves over the earlier small CNN smoke baseline, which achieved approximately `0.5792` validation accuracy and predicted only class 0. The frozen RETFound encoder plus linear head detects both classes and achieves strong referable DR class accuracy.
+
+This result should be treated as a successful integration and baseline milestone, not as final model performance. Accuracy is useful, but future research-quality evaluation should include sensitivity/recall, specificity, AUC, F1, calibration metrics, and uncertainty metrics.
+
+### Next planned experiment
+
+Run a 5-epoch frozen RETFound linear baseline using the same setup to check whether validation performance improves beyond the 1-epoch baseline while preserving strong referable DR sensitivity.

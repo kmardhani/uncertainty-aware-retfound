@@ -239,3 +239,59 @@ The recommended implementation direction is to keep the checkpoint local and exp
     --backbone-checkpoint /path/to/retfound_weights.pth
 
 This keeps large model weights out of Git and avoids hidden automatic downloads.
+
+## RETFound linear baseline milestone
+
+The project now supports a real frozen RETFound-MAE encoder with a project-owned linear classification head. The integration follows the external-repo adapter strategy: RETFound source code and checkpoint files are kept outside this repository, while this repository provides the experiment pipeline, dataset handling, evaluation logic, and documentation.
+
+### External dependency boundary
+
+The RETFound integration uses explicit local paths:
+
+- `--retfound-repo-path`
+- `--backbone-checkpoint`
+
+The project does not vendor RETFound source code and does not auto-download weights. This keeps the repository lightweight and makes external model provenance explicit.
+
+The first successful cluster setup used:
+
+- External repo: `/home/karim/external/RETFound_MAE`
+- External repo remote: `https://github.com/rmaphoh/RETFound_MAE.git`
+- External repo commit: `ae9a9ecf37857cf47b8aa9f87cd6f710d75db287`
+- Checkpoint: `YukunZhou/RETFound_mae_natureCFP`
+- Local checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
+- Architecture: `RETFound_mae`
+- Feature dimension: `1024`
+
+### First baseline result
+
+A 1-epoch frozen RETFound linear baseline was run on the APTOS 2019 referable diabetic retinopathy task.
+
+Configuration:
+
+- Model type: `retfound_linear`
+- Encoder: frozen RETFound-MAE
+- Linear head trainable parameters: `2,050`
+- Total parameters: `303,303,682`
+- Dataset split: train/validation
+- Train examples: `2,930`
+- Validation examples: `366`
+- Batch size: `8`
+- Learning rate: `0.001`
+- Image resize/crop: `224`
+- Device: `cuda`
+
+Results:
+
+- Train loss: `0.42631749279873365`
+- Validation loss: `0.3518964662903645`
+- Validation accuracy: `0.8360655903816223`
+- Confusion matrix: `[[165, 47], [13, 141]]`
+- Class 0 per-class accuracy: `0.7783018867924528`
+- Class 1 per-class accuracy: `0.9155844155844156`
+
+This result establishes a credible foundation-model baseline and confirms that the project has moved beyond infrastructure smoke testing. The earlier small CNN smoke run reached approximately `0.5792` validation accuracy and predicted only class 0, while the RETFound baseline detects both classes and performs substantially better.
+
+Future evaluation should not rely on accuracy alone. For medical screening and trustworthy retinal disease classification, the project should also track sensitivity/recall, specificity, AUC, F1, calibration error, Brier score, negative log likelihood, and uncertainty-aware metrics.
+
+The next planned experiment is a 5-epoch frozen RETFound linear baseline using the same setup.
