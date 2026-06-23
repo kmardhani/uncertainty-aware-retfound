@@ -115,7 +115,29 @@ def test_evaluate_model_can_include_classification_metrics(tmp_path: Path) -> No
     assert "f1" in result["metrics"]
     assert "balanced_accuracy" in result["metrics"]
     assert "auc" in result["metrics"]
+    assert "brier_score" in result["metrics"]
+    assert "negative_log_likelihood" in result["metrics"]
+    assert "expected_calibration_error" in result["metrics"]
+    assert "mean_confidence" in result["metrics"]
+    assert "mean_positive_class_probability" in result["metrics"]
     assert result["metrics"]["auc"] is None or 0.0 <= result["metrics"]["auc"] <= 1.0
+    assert result["metrics"]["brier_score"] is None or result["metrics"]["brier_score"] >= 0.0
+    assert (
+        result["metrics"]["negative_log_likelihood"] is None
+        or result["metrics"]["negative_log_likelihood"] >= 0.0
+    )
+    assert (
+        result["metrics"]["expected_calibration_error"] is None
+        or 0.0 <= result["metrics"]["expected_calibration_error"] <= 1.0
+    )
+    assert (
+        result["metrics"]["mean_confidence"] is None
+        or 0.0 <= result["metrics"]["mean_confidence"] <= 1.0
+    )
+    assert (
+        result["metrics"]["mean_positive_class_probability"] is None
+        or 0.0 <= result["metrics"]["mean_positive_class_probability"] <= 1.0
+    )
 
 
 def test_evaluate_model_rejects_empty_dataloader(tmp_path: Path) -> None:

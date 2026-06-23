@@ -85,6 +85,31 @@ def _validate_binary_scores(
     return validated_labels, y_score.to(dtype=torch.float32)
 
 
+def _validate_probability_matrix(
+    y_true: torch.Tensor,
+    probabilities: torch.Tensor,
+    num_classes: int = 2,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Validate labels and class-probability matrix."""
+
+    if y_true.ndim != 1:
+        raise ValueError("y_true must be a 1D tensor.")
+
+    if probabilities.ndim != 2:
+        raise ValueError("probabilities must be a 2D tensor.")
+
+    if probabilities.shape[0] != y_true.shape[0]:
+        raise ValueError("y_true and probabilities must have matching first dimensions.")
+
+    if probabilities.shape[1] != num_classes:
+        raise ValueError(f"probabilities must have shape [N, {num_classes}].")
+
+    if y_true.numel() == 0:
+        raise ValueError("y_true and probabilities must not be empty.")
+
+    return y_true.to(dtype=torch.int64), probabilities.to(dtype=torch.float32)
+
+
 def accuracy_score(predictions: torch.Tensor, labels: torch.Tensor) -> float:
     """Return classification accuracy as a Python float."""
 
@@ -318,11 +343,115 @@ def auc_score_binary(
     return float(roc_auc_score(binary_labels.tolist(), validated_scores.tolist()))
 
 
+def brier_score_binary(
+    y_true: torch.Tensor,
+    y_score: torch.Tensor,
+    positive_label: int = 1,
+) -> float | None:
+    """Return binary Brier score from positive-class probabilities."""
+
+    validated_labels, validated_scores = _validate_binary_scores(y_true, y_score)
+    binary_labels = (validated_labels == positive_label).to(dtype=torch.float32)
+    return float(torch.mean((validated_scores - binary_labels) ** 2).item())
+
+
+def negative_log_likelihood_binary(
+    y_true: torch.Tensor,
+    logits: torch.Tensor | None = None,
+    probabilities: torch.Tensor | None = None,
+) -> float | None:
+    """Return average binary negative log likelihood.
+
+    Prefers logits when available, otherwise falls back to probabilities.
+    """
+
+    if logits is None and probabilities is None:
+        return None
+
+    if logits is not None:
+        validated_labels, _ = _validate_probability_matrix(y_true, logits, num_classes=2)
+        return float(torch.nn.functional.cross_entropy(logits, validated_labels).item())
+
+    assert probabilities is not None
+    validated_labels, validated_probabilities = _validate_probability_matrix(
+        y_true,
+        probabilities,
+        num_classes=2,
+    )
+    selected_probabilities = validated_probabilities[
+        torch.arange(validated_labels.shape[0]),
+        validated_labels,
+    ]
+    clamped = torch.clamp(selected_probabilities, min=1e-12, max=1.0)
+    return float((-torch.log(clamped)).mean().item())
+
+
+def expected_calibration_error_binary(
+    y_true: torch.Tensor,
+    probabilities: torch.Tensor,
+    num_bins: int = 10,
+) -> float | None:
+    """Return expected calibration error using max confidence and correctness."""
+
+    if num_bins <= 0:
+        raise ValueError(f"num_bins must be positive. Got: {num_bins}")
+
+    validated_labels, validated_probabilities = _validate_probability_matrix(
+        y_true,
+        probabilities,
+        num_classes=2,
+    )
+    confidences, predictions = torch.max(validated_probabilities, dim=1)
+    correctness = (predictions == validated_labels).to(dtype=torch.float32)
+
+    bin_boundaries = torch.linspace(0.0, 1.0, steps=num_bins + 1)
+    total_examples = validated_labels.shape[0]
+    ece = 0.0
+
+    for bin_index in range(num_bins):
+        lower = bin_boundaries[bin_index]
+        upper = bin_boundaries[bin_index + 1]
+        if bin_index == 0:
+            in_bin = (confidences >= lower) & (confidences <= upper)
+        else:
+            in_bin = (confidences > lower) & (confidences <= upper)
+
+        bin_count = int(in_bin.sum().item())
+        if bin_count == 0:
+            continue
+
+        bin_confidence = float(confidences[in_bin].mean().item())
+        bin_accuracy = float(correctness[in_bin].mean().item())
+        ece += abs(bin_accuracy - bin_confidence) * (bin_count / total_examples)
+
+    return float(ece)
+
+
+def mean_confidence_binary(probabilities: torch.Tensor) -> float | None:
+    """Return mean max predicted probability for binary probabilities."""
+
+    if probabilities.ndim != 2 or probabilities.shape[1] != 2 or probabilities.shape[0] == 0:
+        return None
+
+    return float(torch.max(probabilities.to(dtype=torch.float32), dim=1).values.mean().item())
+
+
+def mean_positive_class_probability_binary(probabilities: torch.Tensor) -> float | None:
+    """Return mean probability assigned to the positive class."""
+
+    if probabilities.ndim != 2 or probabilities.shape[1] != 2 or probabilities.shape[0] == 0:
+        return None
+
+    return float(probabilities.to(dtype=torch.float32)[:, 1].mean().item())
+
+
 def classification_summary(
     predictions: torch.Tensor,
     labels: torch.Tensor,
     num_classes: int,
     positive_scores: torch.Tensor | None = None,
+    probabilities: torch.Tensor | None = None,
+    logits: torch.Tensor | None = None,
 ) -> dict[str, Any]:
     """Return a small classification summary for logging and testing."""
 
@@ -357,5 +486,25 @@ def classification_summary(
 
         if positive_scores is not None:
             summary["auc"] = auc_score_binary(validated_labels, positive_scores)
+            summary["brier_score"] = brier_score_binary(validated_labels, positive_scores)
+
+        summary["negative_log_likelihood"] = negative_log_likelihood_binary(
+            validated_labels,
+            logits=logits,
+            probabilities=probabilities,
+        )
+        summary["expected_calibration_error"] = (
+            expected_calibration_error_binary(validated_labels, probabilities)
+            if probabilities is not None
+            else None
+        )
+        summary["mean_confidence"] = (
+            mean_confidence_binary(probabilities) if probabilities is not None else None
+        )
+        summary["mean_positive_class_probability"] = (
+            mean_positive_class_probability_binary(probabilities)
+            if probabilities is not None
+            else None
+        )
 
     return summary
