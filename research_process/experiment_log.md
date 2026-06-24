@@ -1391,3 +1391,34 @@ Add `scripts/analysis/build_experiment_summary_tables.py` to consolidate the mai
 ### Interpretation
 
 The consolidated tables make it easier to compare the main operating points without reopening each run directory by hand. The interpretation is still bounded: accepted-case selective-referral metrics are conditional on non-deferred cases rather than full-population performance, and all current findings are still single-dataset results that need external validation.
+
+## Experiment: Threshold-sweep screening control analysis
+
+### Objective
+
+Add `scripts/analysis/evaluate_threshold_sweep.py` and use it as a control analysis to test whether false-negative reduction could be achieved by ordinary threshold tuning rather than Bayesian last-layer uncertainty.
+
+### Outputs
+
+- `outputs/threshold_sweeps/softmax_temp_threshold_sweep.csv`
+- `outputs/threshold_sweeps/bayes_max_sensitivity_threshold_sweep.csv`
+- `outputs/threshold_sweeps/bayes_balanced_threshold_sweep.csv`
+
+### Key results
+
+- The temperature-scaled softmax baseline reached a zero-false-negative operating point at threshold `0.04`, with sensitivity `1.0000`, specificity `0.5849`, `88` false positives, referral rate `0.6612`, and accuracy `0.7596`.
+- The variational Bayesian max-sensitivity model reached the same zero-false-negative operating point at threshold `0.15`, with sensitivity `1.0000`, specificity `0.5849`, `88` false positives, referral rate `0.6612`, and accuracy `0.7596`.
+- The variational Bayesian balanced model also reached the same zero-false-negative operating point at threshold `0.10`, with sensitivity `1.0000`, specificity `0.5849`, `88` false positives, referral rate `0.6612`, and accuracy `0.7596`.
+
+### Interpretation
+
+This control matters because it constrains what the project can honestly claim. Threshold tuning can also eliminate false negatives on this validation set, so the study should not claim that Bayesian layers are required to reach zero false negatives.
+
+The stronger claim is narrower and more useful: Bayesian uncertainty supports a selective-referral workflow. Compared with low-threshold softmax screening, selective referral maintains much higher accepted-case accuracy and specificity while deferring uncertain cases to human review.
+
+The clearest comparison is:
+
+- Bayesian mutual-information selective referral at about `70%` coverage had `0` false negatives among accepted automated decisions, accuracy `0.9416`, specificity `0.8944`, `15` false positives among accepted cases, and `109` deferred cases out of `366`.
+- Threshold-tuned softmax screening at the zero-false-negative operating point had accuracy `0.7596`, specificity `0.5849`, `88` false positives, and referral rate `0.6612`.
+
+Threshold tuning and selective referral therefore represent different clinical workflows and should be compared using both human-review burden and accepted-case safety. The current result strengthens the argument for defer-to-human uncertainty routing, but it does not justify overclaiming that Bayesian heads are uniquely necessary for false-negative control.

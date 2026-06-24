@@ -919,3 +919,65 @@ Limitations:
 - Add uncertainty metrics.
 
 - Integrate RETFound after the baseline pipeline is validated on real data.
+
+
+## Decision: Treat Threshold Tuning as a Required Screening Control
+
+**Date:** 2026-06-24
+
+**Status:** Accepted
+
+### Context
+
+The project had already shown that Bayesian last-layer models and uncertainty-aware selective referral could reduce false negatives on APTOS validation data. However, that alone was not enough to support a strong causal claim, because an ordinary probability-threshold change might achieve similar false-negative reduction without Bayesian uncertainty.
+
+Threshold-sweep analysis was added through `scripts/analysis/evaluate_threshold_sweep.py` and applied to:
+
+- `outputs/threshold_sweeps/softmax_temp_threshold_sweep.csv`
+- `outputs/threshold_sweeps/bayes_max_sensitivity_threshold_sweep.csv`
+- `outputs/threshold_sweeps/bayes_balanced_threshold_sweep.csv`
+
+At their zero-false-negative operating points, the temperature-scaled softmax model and both Bayesian models all converged to the same validation behavior: sensitivity `1.0000`, specificity `0.5849`, `88` false positives, referral rate `0.6612`, and accuracy `0.7596`.
+
+### Decision
+
+Treat threshold tuning as a required screening control and narrow the study claim accordingly.
+
+The project should not claim that Bayesian last-layer methods are required to achieve zero false negatives on the current validation set. Instead, the defensible claim is that Bayesian uncertainty is useful for selective-referral workflows that preserve substantially stronger accepted-case accuracy and specificity while routing uncertain cases to human review.
+
+### Rationale
+
+This change improves causal discipline in the study narrative.
+
+If a low decision threshold can remove false negatives for both deterministic and Bayesian models, then zero false negatives alone is not evidence that Bayesian uncertainty is the unique mechanism. The more meaningful comparison is between two different workflows:
+
+- low-threshold automatic screening, which expands positive referrals directly
+- uncertainty-aware selective referral, which defers uncertain cases for human review
+
+The selective-referral result remains stronger on clinical-safety grounds because it achieves better accepted-case accuracy and specificity with an explicit review pathway, rather than simply broadening the automated positive region.
+
+### Consequences
+
+Positive consequences:
+
+- The project now has a stronger control against overclaiming Bayesian necessity.
+
+- The interpretation of uncertainty methods is more precise.
+
+- Future comparisons can distinguish thresholding effects from true uncertainty-routing benefits.
+
+Limitations:
+
+- The threshold-sweep conclusion is still based on a single validation set.
+
+- Threshold tuning and selective referral are not interchangeable workflows, so they should not be compared on false negatives alone.
+
+- External validation is still required before drawing broader screening conclusions.
+
+### Follow-up Actions
+
+- Use threshold-sweep tables as a standard control in future screening analyses.
+
+- Report human-review burden alongside sensitivity-focused operating points.
+
+- Continue treating selective referral, not zero false negatives alone, as the main safety-oriented Bayesian result.
