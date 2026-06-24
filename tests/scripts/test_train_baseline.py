@@ -135,6 +135,8 @@ def test_run_baseline_training_writes_metrics_json(tmp_path: Path) -> None:
         "image_path",
         "true_label",
         "predicted_label",
+        "logit_class_0",
+        "logit_class_1",
         "probability_class_0",
         "probability_class_1",
         "confidence",
@@ -142,6 +144,8 @@ def test_run_baseline_training_writes_metrics_json(tmp_path: Path) -> None:
     ]
     assert len(validation_predictions) == 2
     assert set(validation_predictions["id_code"]) == {"sample_c", "sample_d"}
+    assert validation_predictions["logit_class_0"].apply(math.isfinite).all()
+    assert validation_predictions["logit_class_1"].apply(math.isfinite).all()
     assert validation_predictions["probability_class_0"].between(0.0, 1.0).all()
     assert validation_predictions["probability_class_1"].between(0.0, 1.0).all()
     assert validation_predictions["confidence"].between(0.0, 1.0).all()

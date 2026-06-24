@@ -70,9 +70,18 @@ def _write_validation_predictions_csv(
 ) -> None:
     """Write per-example validation predictions to CSV."""
 
+    logits = validation_result.get("logits")
     probabilities = validation_result.get("probabilities")
+    if not isinstance(logits, torch.Tensor):
+        raise ValueError("Validation result does not contain logit tensors.")
+
     if not isinstance(probabilities, torch.Tensor):
         raise ValueError("Validation result does not contain probability tensors.")
+
+    if logits.ndim != 2 or logits.shape[1] != 2:
+        raise ValueError(
+            "validation_predictions.csv currently supports binary classification outputs only."
+        )
 
     if probabilities.ndim != 2 or probabilities.shape[1] != 2:
         raise ValueError(
@@ -97,6 +106,8 @@ def _write_validation_predictions_csv(
             "image_path": image_paths,
             "true_label": labels.tolist(),
             "predicted_label": predictions.tolist(),
+            "logit_class_0": logits[:, 0].tolist(),
+            "logit_class_1": logits[:, 1].tolist(),
             "probability_class_0": probabilities[:, 0].tolist(),
             "probability_class_1": probabilities[:, 1].tolist(),
             "confidence": confidence.tolist(),
