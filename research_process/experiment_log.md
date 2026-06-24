@@ -730,6 +730,59 @@ Relative to the variational Bayesian cached-feature results:
 
 The Laplace baseline is useful as a Bayesian uncertainty reference and gives a meaningful reduction in false negatives relative to the deterministic cached-feature baseline. However, this diagonal approximation did not outperform either variational Bayesian or temperature scaling on calibration-oriented metrics. It should therefore be treated as a credible baseline, not as the current preferred uncertainty method.
 
+## Experiment: Clinical Decision-Policy Comparison
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Compare simple clinical decision policies built from cached-feature model predictions to test whether straightforward ensemble referral rules improve safety beyond the best single-model screening operating points.
+
+### Output Files
+
+1. `outputs/decision_policies/retfound_policy_comparison.json`
+2. `outputs/decision_policies/retfound_policy_comparison.csv`
+
+### Models And Policies Compared
+
+1. `softmax_temp`
+2. `bayes_max_sensitivity`
+3. `bayes_balanced`
+4. `laplace_sensitivity`
+5. `OR rule`
+6. `majority vote`
+7. `AND rule`
+
+### Key Single-Model Results
+
+1. `softmax_temp`: sensitivity `0.8896`, specificity `0.8726`, false negatives `17`, false positives `27`, referral_rate `0.4481`
+2. `bayes_max_sensitivity`: sensitivity `0.9610`, specificity `0.8443`, false negatives `6`, false positives `33`, referral_rate `0.4945`
+3. `bayes_balanced`: sensitivity `0.9545`, specificity `0.8632`, false negatives `7`, false positives `29`, referral_rate `0.4809`
+4. `laplace_sensitivity`: sensitivity `0.9481`, specificity `0.8585`, false negatives `8`, false positives `30`, referral_rate `0.4809`
+
+### Key Ensemble And Policy Results
+
+1. `OR rule`: sensitivity `0.9610`, specificity `0.8302`, false negatives `6`, false positives `36`, referral_rate `0.5027`
+2. `majority vote`: sensitivity `0.9545`, specificity `0.8491`, false negatives `7`, false positives `32`, referral_rate `0.4891`
+3. `AND rule`: sensitivity `0.8896`, specificity `0.8915`, false negatives `17`, false positives `23`, referral_rate `0.4372`
+
+### Interpretation
+
+The ensemble rules did not improve on the strongest single-model Bayesian operating points.
+
+1. The `OR rule` did not reduce false negatives below `bayes_max_sensitivity`; both had `6` false negatives
+2. The `OR rule` increased false positives and referral rate relative to `bayes_max_sensitivity`
+3. `majority vote` did not improve over `bayes_balanced`; it had the same false negatives but more false positives
+4. The `AND rule` improved specificity but reduced sensitivity and is not suitable for screening-oriented referral
+5. The remaining false-negative cases may be shared hard cases across models rather than isolated model-specific misses
+
+### Conclusion
+
+1. The best maximum-sensitivity operating point remains `bayes_max_sensitivity`
+2. The best balanced screening operating point remains `bayes_balanced`
+3. Simple ensemble referral policies did not improve safety beyond the best single Bayesian operating point
+
 The tests verify:
 
     metrics.json is created

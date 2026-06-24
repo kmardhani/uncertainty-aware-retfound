@@ -685,6 +685,66 @@ However, the diagonal approximation did not outperform variational Bayesian or t
 
 Accepted.
 
+## Decision 011 — Prefer The Best Single Bayesian Operating Point Over Simple Ensemble Referral Rules
+
+**Date:** 2026-06-24
+
+### Decision
+
+The project will treat the strongest single Bayesian operating points as the primary screening baselines rather than simple ensemble referral rules such as OR, majority vote, or AND.
+
+### Context
+
+Decision-policy outputs were written to:
+
+1. `outputs/decision_policies/retfound_policy_comparison.json`
+2. `outputs/decision_policies/retfound_policy_comparison.csv`
+
+Compared models and policies:
+
+1. `softmax_temp`
+2. `bayes_max_sensitivity`
+3. `bayes_balanced`
+4. `laplace_sensitivity`
+5. `OR rule`
+6. `majority vote`
+7. `AND rule`
+
+Key single-model results:
+
+1. `softmax_temp`: sensitivity `0.8896`, specificity `0.8726`, false negatives `17`, false positives `27`, referral_rate `0.4481`
+2. `bayes_max_sensitivity`: sensitivity `0.9610`, specificity `0.8443`, false negatives `6`, false positives `33`, referral_rate `0.4945`
+3. `bayes_balanced`: sensitivity `0.9545`, specificity `0.8632`, false negatives `7`, false positives `29`, referral_rate `0.4809`
+4. `laplace_sensitivity`: sensitivity `0.9481`, specificity `0.8585`, false negatives `8`, false positives `30`, referral_rate `0.4809`
+
+Key ensemble and rule-based results:
+
+1. `OR rule`: sensitivity `0.9610`, specificity `0.8302`, false negatives `6`, false positives `36`, referral_rate `0.5027`
+2. `majority vote`: sensitivity `0.9545`, specificity `0.8491`, false negatives `7`, false positives `32`, referral_rate `0.4891`
+3. `AND rule`: sensitivity `0.8896`, specificity `0.8915`, false negatives `17`, false positives `23`, referral_rate `0.4372`
+
+The `OR rule` did not reduce false negatives below `bayes_max_sensitivity`; both had `6`. It also increased false positives and referral rate. `majority vote` did not improve over `bayes_balanced`; it matched false negatives but produced more false positives. The `AND rule` improved specificity but was not suitable for screening because it lost sensitivity.
+
+### Rationale
+
+This comparison suggests that the remaining misses are at least partly shared hard cases across models. If that is true, then naive aggregation rules will not improve safety unless they add a genuinely different error profile.
+
+The strongest current operating points therefore remain the single Bayesian models that were already tuned for the target use case:
+
+1. `bayes_max_sensitivity` for maximum-sensitivity screening
+2. `bayes_balanced` for a more balanced screening tradeoff
+
+### Consequences
+
+- Future screening comparisons should keep `bayes_max_sensitivity` as the primary maximum-sensitivity baseline.
+- Future balanced comparisons should keep `bayes_balanced` as the primary balanced-screening baseline.
+- Simple OR/majority/AND ensemble policies should not be treated as a safety improvement by default.
+- Any future ensemble work should focus on genuinely complementary models or richer decision logic, not only naive voting rules.
+
+### Status
+
+Accepted.
+
 ### Status
 
 Accepted.

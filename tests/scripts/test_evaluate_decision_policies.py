@@ -187,3 +187,37 @@ def test_main_prints_summary(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     assert "Evaluated" in captured.out
     assert "Saved policy summary to:" in captured.out
     assert "Saved policy table to:" in captured.out
+
+
+def test_run_policy_analysis_creates_nested_output_directories(tmp_path: Path) -> None:
+    model_a_path = tmp_path / "model_a.csv"
+    model_b_path = tmp_path / "model_b.csv"
+    output_json = tmp_path / "nested" / "analysis" / "policy_results.json"
+    output_csv = tmp_path / "nested" / "analysis" / "policy_results.csv"
+
+    _write_predictions_csv(
+        model_a_path,
+        rows=[
+            {"id_code": "a", "true_label": 0, "predicted_label": 0},
+            {"id_code": "b", "true_label": 1, "predicted_label": 1},
+        ],
+    )
+    _write_predictions_csv(
+        model_b_path,
+        rows=[
+            {"id_code": "a", "true_label": 0, "predicted_label": 1},
+            {"id_code": "b", "true_label": 1, "predicted_label": 1},
+        ],
+    )
+
+    run_policy_analysis(
+        prediction_pairs=[
+            f"model_a={model_a_path}",
+            f"model_b={model_b_path}",
+        ],
+        output_json=output_json,
+        output_csv=output_csv,
+    )
+
+    assert output_json.exists()
+    assert output_csv.exists()

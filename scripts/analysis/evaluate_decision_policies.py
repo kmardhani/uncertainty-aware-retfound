@@ -218,6 +218,8 @@ def run_policy_analysis(
 
     output_json_path = Path(output_json)
     output_csv_path = Path(output_csv)
+    output_json_path.parent.mkdir(parents=True, exist_ok=True)
+    output_csv_path.parent.mkdir(parents=True, exist_ok=True)
 
     result = {
         "prediction_sources": {name: str(path) for name, path in prediction_sources.items()},
