@@ -14,7 +14,7 @@ from torch import nn
 from scripts.features.export_retfound_features import main, run_feature_export
 
 
-def _write_fake_png(image_path: Path, color: tuple[int, int, int]) -> None:
+def _write_fake_image(image_path: Path, color: tuple[int, int, int]) -> None:
     image_path.parent.mkdir(parents=True, exist_ok=True)
     image = Image.new("RGB", (32, 32), color=color)
     image.save(image_path)
@@ -80,6 +80,13 @@ def _make_metadata() -> pd.DataFrame:
                 "sample_d",
                 "sample_e",
             ],
+            "image_path": [
+                "sample_a.png",
+                "sample_b.png",
+                "sample_c.png",
+                "sample_d.png",
+                "sample_e.png",
+            ],
             "label": [0, 1, 0, 1, 1],
             "split": ["train", "train", "val", "test", "test"],
         }
@@ -94,11 +101,11 @@ def test_run_feature_export_writes_expected_outputs(tmp_path: Path) -> None:
     repo_path = tmp_path / "fake_retfound_repo"
     checkpoint_path = tmp_path / "retfound_checkpoint.pth"
 
-    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
-    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
-    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
-    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
-    _write_fake_png(image_root / "sample_e.png", color=(0, 255, 255))
+    _write_fake_image(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_image(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_image(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_image(image_root / "sample_d.png", color=(255, 255, 0))
+    _write_fake_image(image_root / "sample_e.png", color=(0, 255, 255))
     metadata.to_csv(metadata_path, index=False)
     _write_fake_retfound_repo(repo_path)
     _write_fake_retfound_checkpoint(repo_path, checkpoint_path)
@@ -136,9 +143,15 @@ def test_run_feature_export_writes_expected_outputs(tmp_path: Path) -> None:
     assert train_features["id_codes"] == ["sample_a", "sample_b"]
     assert val_features["id_codes"] == ["sample_c"]
     assert test_features["id_codes"] == ["sample_d", "sample_e"]
-    assert len(train_features["image_paths"]) == 2
-    assert len(val_features["image_paths"]) == 1
-    assert len(test_features["image_paths"]) == 2
+    assert train_features["image_paths"] == [
+        str(image_root / "sample_a.png"),
+        str(image_root / "sample_b.png"),
+    ]
+    assert val_features["image_paths"] == [str(image_root / "sample_c.png")]
+    assert test_features["image_paths"] == [
+        str(image_root / "sample_d.png"),
+        str(image_root / "sample_e.png"),
+    ]
     assert metadata_json["model"] == "RETFound_mae"
     assert metadata_json["backbone_checkpoint"] == str(checkpoint_path)
     assert metadata_json["retfound_repo_path"] == str(repo_path)
@@ -153,6 +166,7 @@ def test_run_feature_export_requires_all_splits(tmp_path: Path) -> None:
     metadata = pd.DataFrame(
         {
             "id_code": ["sample_a", "sample_b"],
+            "image_path": ["sample_a.png", "sample_b.png"],
             "label": [0, 1],
             "split": ["train", "val"],
         }
@@ -162,8 +176,8 @@ def test_run_feature_export_requires_all_splits(tmp_path: Path) -> None:
     repo_path = tmp_path / "fake_retfound_repo"
     checkpoint_path = tmp_path / "retfound_checkpoint.pth"
 
-    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
-    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_image(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_image(image_root / "sample_b.png", color=(0, 255, 0))
     metadata.to_csv(metadata_path, index=False)
     _write_fake_retfound_repo(repo_path)
     _write_fake_retfound_checkpoint(repo_path, checkpoint_path)
@@ -196,11 +210,11 @@ def test_main_prints_feature_metadata_path(
     repo_path = tmp_path / "fake_retfound_repo"
     checkpoint_path = tmp_path / "retfound_checkpoint.pth"
 
-    _write_fake_png(image_root / "sample_a.png", color=(255, 0, 0))
-    _write_fake_png(image_root / "sample_b.png", color=(0, 255, 0))
-    _write_fake_png(image_root / "sample_c.png", color=(0, 0, 255))
-    _write_fake_png(image_root / "sample_d.png", color=(255, 255, 0))
-    _write_fake_png(image_root / "sample_e.png", color=(0, 255, 255))
+    _write_fake_image(image_root / "sample_a.png", color=(255, 0, 0))
+    _write_fake_image(image_root / "sample_b.png", color=(0, 255, 0))
+    _write_fake_image(image_root / "sample_c.png", color=(0, 0, 255))
+    _write_fake_image(image_root / "sample_d.png", color=(255, 255, 0))
+    _write_fake_image(image_root / "sample_e.png", color=(0, 255, 255))
     metadata.to_csv(metadata_path, index=False)
     _write_fake_retfound_repo(repo_path)
     _write_fake_retfound_checkpoint(repo_path, checkpoint_path)
@@ -231,3 +245,85 @@ def test_main_prints_feature_metadata_path(
 
     captured = capsys.readouterr()
     assert "Saved feature metadata to:" in captured.out
+
+
+def test_run_feature_export_resolves_exact_png_image_paths(tmp_path: Path) -> None:
+    metadata = pd.DataFrame(
+        {
+            "id_code": ["sample_a", "sample_b", "sample_c"],
+            "image_path": ["nested/sample_a.png", "nested/sample_b.png", "nested/sample_c.png"],
+            "label": [0, 1, 0],
+            "split": ["train", "val", "test"],
+        }
+    )
+    metadata_path = tmp_path / "prepared_metadata.csv"
+    image_root = tmp_path / "images"
+    output_dir = tmp_path / "features"
+    repo_path = tmp_path / "fake_retfound_repo"
+    checkpoint_path = tmp_path / "retfound_checkpoint.pth"
+
+    _write_fake_image(image_root / "nested" / "sample_a.png", color=(255, 0, 0))
+    _write_fake_image(image_root / "nested" / "sample_b.png", color=(0, 255, 0))
+    _write_fake_image(image_root / "nested" / "sample_c.png", color=(0, 0, 255))
+    metadata.to_csv(metadata_path, index=False)
+    _write_fake_retfound_repo(repo_path)
+    _write_fake_retfound_checkpoint(repo_path, checkpoint_path)
+
+    run_feature_export(
+        metadata_csv=metadata_path,
+        image_root=image_root,
+        output_dir=output_dir,
+        backbone_checkpoint=checkpoint_path,
+        retfound_repo_path=repo_path,
+        batch_size=1,
+        resize=32,
+        center_crop=32,
+        num_workers=0,
+        device="cpu",
+        feature_dim=8,
+        show_progress=False,
+    )
+
+    train_features = torch.load(output_dir / "train_features.pt", map_location="cpu")
+    assert train_features["image_paths"] == [str(image_root / "nested" / "sample_a.png")]
+
+
+def test_run_feature_export_resolves_exact_jpg_image_paths(tmp_path: Path) -> None:
+    metadata = pd.DataFrame(
+        {
+            "id_code": ["sample_a", "sample_b", "sample_c"],
+            "image_path": ["sample_a.jpg", "sample_b.jpg", "sample_c.jpg"],
+            "label": [0, 1, 0],
+            "split": ["train", "val", "test"],
+        }
+    )
+    metadata_path = tmp_path / "prepared_metadata.csv"
+    image_root = tmp_path / "images"
+    output_dir = tmp_path / "features"
+    repo_path = tmp_path / "fake_retfound_repo"
+    checkpoint_path = tmp_path / "retfound_checkpoint.pth"
+
+    _write_fake_image(image_root / "sample_a.jpg", color=(255, 0, 0))
+    _write_fake_image(image_root / "sample_b.jpg", color=(0, 255, 0))
+    _write_fake_image(image_root / "sample_c.jpg", color=(0, 0, 255))
+    metadata.to_csv(metadata_path, index=False)
+    _write_fake_retfound_repo(repo_path)
+    _write_fake_retfound_checkpoint(repo_path, checkpoint_path)
+
+    run_feature_export(
+        metadata_csv=metadata_path,
+        image_root=image_root,
+        output_dir=output_dir,
+        backbone_checkpoint=checkpoint_path,
+        retfound_repo_path=repo_path,
+        batch_size=1,
+        resize=32,
+        center_crop=32,
+        num_workers=0,
+        device="cpu",
+        feature_dim=8,
+        show_progress=False,
+    )
+
+    train_features = torch.load(output_dir / "train_features.pt", map_location="cpu")
+    assert train_features["image_paths"] == [str(image_root / "sample_a.jpg")]

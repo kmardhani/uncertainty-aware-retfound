@@ -1,4 +1,4 @@
-"""Export frozen RETFound encoder features for prepared APTOS splits."""
+"""Export frozen RETFound encoder features for prepared metadata splits."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
-from uncertainty_retfound.data.aptos import APTOSDataset
 from uncertainty_retfound.data.dataloaders import create_dataloader
+from uncertainty_retfound.data.metadata_dataset import MetadataImageDataset
 from uncertainty_retfound.data.transforms import build_torchvision_transform_from_config
 from uncertainty_retfound.models.retfound import (
     _extract_features_from_encoder_output,
@@ -151,7 +151,6 @@ def _export_split_features(
     num_workers: int,
     id_column: str,
     label_column: str,
-    image_extension: str,
     transform: Any,
     device: torch.device,
     show_progress: bool,
@@ -162,12 +161,11 @@ def _export_split_features(
     if split_metadata.empty:
         raise ValueError(f"No rows found for split '{split_name}'.")
 
-    dataset = APTOSDataset(
+    dataset = MetadataImageDataset(
         metadata=split_metadata,
         image_root=image_root,
         id_column=id_column,
         label_column=label_column,
-        image_extension=image_extension,
         transform=transform,
     )
     dataloader = create_dataloader(
@@ -263,7 +261,6 @@ def run_feature_export(
             num_workers=num_workers,
             id_column=id_column,
             label_column=label_column,
-            image_extension=image_extension,
             transform=transform,
             device=resolved_device,
             show_progress=show_progress,
@@ -304,7 +301,9 @@ def run_feature_export(
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse feature export CLI arguments."""
 
-    parser = argparse.ArgumentParser(description="Export frozen RETFound features for APTOS.")
+    parser = argparse.ArgumentParser(
+        description="Export frozen RETFound features for prepared metadata."
+    )
     parser.add_argument("--metadata-csv", type=Path, required=True)
     parser.add_argument("--image-root", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
