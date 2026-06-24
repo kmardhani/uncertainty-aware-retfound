@@ -18,6 +18,14 @@ from uncertainty_retfound.data.dataloaders import create_dataloader
 from uncertainty_retfound.evaluation.metrics import classification_summary
 from uncertainty_retfound.models.bayesian import BayesianLinearClassifier
 
+_SELECTION_METRIC_DIRECTIONS: dict[str, str] = {
+    "val_loss": "min",
+    "val_accuracy": "max",
+    "balanced_accuracy": "max",
+    "sensitivity": "max",
+    "expected_calibration_error": "min",
+}
+
 
 def _set_seed(seed: int) -> None:
     """Set random seeds for deterministic local smoke tests."""
@@ -419,6 +427,49 @@ def _write_validation_predictions_csv(
     dataframe.to_csv(output_path, index=False)
 
 
+def _extract_selection_metric_value(
+    epoch_result: dict[str, Any],
+    selection_metric: str,
+) -> float:
+    """Extract the scalar value used for best-epoch selection."""
+
+    if selection_metric == "val_loss":
+        metric_value = epoch_result.get("val_loss")
+    elif selection_metric == "val_accuracy":
+        metric_value = epoch_result.get("val_accuracy")
+    else:
+        val_metrics = epoch_result.get("val_metrics")
+        if not isinstance(val_metrics, dict):
+            raise ValueError(
+                f"Epoch result is missing 'val_metrics' for selection metric '{selection_metric}'."
+            )
+        metric_value = val_metrics.get(selection_metric)
+
+    if not isinstance(metric_value, (int, float)):
+        raise ValueError(
+            f"Selection metric '{selection_metric}' is missing or non-scalar in epoch results."
+        )
+
+    return float(metric_value)
+
+
+def _is_better_epoch(
+    current_value: float,
+    best_value: float | None,
+    selection_metric: str,
+) -> bool:
+    """Return True when the current metric improves on the best so far."""
+
+    if best_value is None:
+        return True
+
+    direction = _SELECTION_METRIC_DIRECTIONS[selection_metric]
+    if direction == "min":
+        return current_value < best_value
+
+    return current_value > best_value
+
+
 def run_bayesian_feature_head_training(
     train_features: str | Path,
     val_features: str | Path,
@@ -433,6 +484,7 @@ def run_bayesian_feature_head_training(
     mc_samples_eval: int = 10,
     prior_std: float = 1.0,
     kl_weight: float | None = None,
+    selection_metric: str = "val_loss",
     show_progress: bool = True,
 ) -> dict[str, Any]:
     """Train a Bayesian linear head on cached feature bundles."""
@@ -451,6 +503,12 @@ def run_bayesian_feature_head_training(
 
     if prior_std <= 0.0:
         raise ValueError(f"prior_std must be positive. Got: {prior_std}")
+
+    if selection_metric not in _SELECTION_METRIC_DIRECTIONS:
+        raise ValueError(
+            "selection_metric must be one of: "
+            f"{sorted(_SELECTION_METRIC_DIRECTIONS)}. Got: {selection_metric}"
+        )
 
     _set_seed(seed)
 
@@ -502,6 +560,10 @@ def run_bayesian_feature_head_training(
 
     epoch_results: list[dict[str, Any]] = []
     final_validation_result: dict[str, Any] | None = None
+    best_validation_result: dict[str, Any] | None = None
+    best_epoch_result: dict[str, Any] | None = None
+    best_metric_value: float | None = None
+    best_model_state_dict: dict[str, torch.Tensor] | None = None
 
     for epoch_index in range(epochs):
         epoch_number = epoch_index + 1
@@ -537,6 +599,19 @@ def run_bayesian_feature_head_training(
         }
         epoch_results.append(epoch_result)
 
+        current_metric_value = _extract_selection_metric_value(epoch_result, selection_metric)
+        if _is_better_epoch(current_metric_value, best_metric_value, selection_metric):
+            best_metric_value = current_metric_value
+            best_epoch_result = epoch_result
+            best_validation_result = {
+                key: value.detach().clone() if isinstance(value, torch.Tensor) else value
+                for key, value in validation_result.items()
+            }
+            best_model_state_dict = {
+                key: value.detach().cpu().clone()
+                for key, value in model.state_dict().items()
+            }
+
         print(
             f"Epoch {epoch_number}/{epochs} "
             f"train_loss={epoch_result['train_loss']:.4f} "
@@ -546,11 +621,18 @@ def run_bayesian_feature_head_training(
 
     if final_validation_result is None:
         raise RuntimeError("Validation result was not produced during training.")
+    if best_validation_result is None or best_epoch_result is None or best_model_state_dict is None:
+        raise RuntimeError("Best epoch result was not produced during training.")
 
     validation_predictions_path = output_dir_path / "validation_predictions.csv"
     _write_validation_predictions_csv(
         validation_result=final_validation_result,
         output_path=validation_predictions_path,
+    )
+    best_validation_predictions_path = output_dir_path / "best_validation_predictions.csv"
+    _write_validation_predictions_csv(
+        validation_result=best_validation_result,
+        output_path=best_validation_predictions_path,
     )
 
     model_path = output_dir_path / "model.pt"
@@ -562,6 +644,16 @@ def run_bayesian_feature_head_training(
             "prior_std": float(prior_std),
         },
         model_path,
+    )
+    best_model_path = output_dir_path / "best_model.pt"
+    torch.save(
+        {
+            "model_state_dict": best_model_state_dict,
+            "feature_dim": feature_dim,
+            "num_classes": int(num_classes),
+            "prior_std": float(prior_std),
+        },
+        best_model_path,
     )
 
     config = {
@@ -579,9 +671,27 @@ def run_bayesian_feature_head_training(
         "mc_samples_eval": int(mc_samples_eval),
         "prior_std": float(prior_std),
         "kl_weight": float(resolved_kl_weight),
+        "best_epoch": int(best_epoch_result["epoch"]),
+        "best_metric_name": selection_metric,
+        "best_metric_value": float(best_metric_value),
     }
     config_path = output_dir_path / "config.json"
     config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
+
+    best_metrics = {
+        **config,
+        "train_split": str(train_bundle["split"]),
+        "validation_split": str(val_bundle["split"]),
+        "epoch_result": best_epoch_result,
+        "final_validation_metrics": best_epoch_result["val_metrics"],
+        "validation_predictions_path": str(best_validation_predictions_path),
+        "model_path": str(best_model_path),
+    }
+    best_metrics_path = output_dir_path / "best_metrics.json"
+    best_metrics_path.write_text(
+        json.dumps(_serialize_for_json(best_metrics), indent=2),
+        encoding="utf-8",
+    )
 
     metrics = {
         **config,
@@ -591,6 +701,9 @@ def run_bayesian_feature_head_training(
         "final_validation_metrics": epoch_results[-1]["val_metrics"],
         "validation_predictions_path": str(validation_predictions_path),
         "model_path": str(model_path),
+        "best_validation_predictions_path": str(best_validation_predictions_path),
+        "best_model_path": str(best_model_path),
+        "best_metrics_path": str(best_metrics_path),
     }
     metrics_path = output_dir_path / "metrics.json"
     metrics_path.write_text(
@@ -602,6 +715,7 @@ def run_bayesian_feature_head_training(
         **metrics,
         "metrics_path": str(metrics_path),
         "config_path": str(config_path),
+        "best_metrics": best_metrics,
     }
 
 
@@ -624,6 +738,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mc-samples-eval", type=int, default=10)
     parser.add_argument("--prior-std", type=float, default=1.0)
     parser.add_argument("--kl-weight", type=float, default=None)
+    parser.add_argument(
+        "--selection-metric",
+        type=str,
+        choices=tuple(_SELECTION_METRIC_DIRECTIONS),
+        default="val_loss",
+    )
     parser.add_argument("--no-progress", action="store_true")
     return parser.parse_args()
 
@@ -646,6 +766,7 @@ def main() -> None:
         mc_samples_eval=args.mc_samples_eval,
         prior_std=args.prior_std,
         kl_weight=args.kl_weight,
+        selection_metric=args.selection_metric,
         show_progress=not args.no_progress,
     )
     print(f"Saved metrics to: {result['metrics_path']}")
