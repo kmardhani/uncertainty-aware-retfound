@@ -418,6 +418,85 @@ The next planned step is either:
 1. Compare alternative best-epoch selection metrics
 2. Implement the Laplace last-layer baseline
 
+## Experiment: Sensitivity-Selected Variational Bayesian Cached-Feature Head
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Evaluate whether selecting the variational Bayesian cached-feature model by sensitivity produces a more screening-oriented operating point than the earlier val-loss-selected Bayesian run and the cached softmax deterministic baseline.
+
+### Run Configuration
+
+Output path:
+
+```text
+outputs/feature_heads/retfound_variational_bayesian_20epoch_best_sensitivity
+```
+
+Model:
+
+1. Variational Bayesian linear head on cached RETFound features
+
+Training setup:
+
+1. Epochs: `20`
+2. Batch size: `8`
+3. Learning rate: `0.001`
+4. `mc_samples_train=1`
+5. `mc_samples_eval=30`
+6. `prior_std=1.0`
+7. `kl_weight=1/2930`
+8. `selection_metric=sensitivity`
+
+### Best Epoch Result
+
+Best epoch: `7`
+
+Best validation metrics:
+
+1. Accuracy: `0.8962`
+2. AUC: `0.9617`
+3. Sensitivity: `0.9545`
+4. Specificity: `0.8538`
+5. Balanced accuracy: `0.9042`
+6. ECE: `0.0305`
+7. NLL: `0.2710`
+8. Brier score: `0.0816`
+9. Confusion matrix: `[[181, 31], [7, 147]]`
+
+### Comparison Against Cached Softmax + Temperature Scaling
+
+Relative to the cached softmax baseline with temperature scaling:
+
+1. Sensitivity improved from `0.8896` to `0.9545`
+2. False negatives decreased from `17` to `7`
+3. Accuracy improved
+4. AUC improved
+5. ECE, NLL, and Brier score were worse
+
+This makes the run interesting as a screening-oriented Bayesian operating point, but not a uniformly better calibrated model. The sensitivity gain came with weaker calibration-oriented summary metrics and lower specificity than the val-loss-selected Bayesian result.
+
+### Uncertainty Separation
+
+The uncertainty summaries again separated correct from incorrect predictions:
+
+1. Mean confidence: correct `0.8883` vs incorrect `0.7248`
+2. Mean predictive entropy: correct `0.2789` vs incorrect `0.5376`
+3. Mean probability variance: correct `0.0021` vs incorrect `0.0053`
+4. Mean mutual information: correct `0.0067` vs incorrect `0.0130`
+
+This is directionally useful, but it still does not remove the need for explicit referral-threshold and error-slice analysis.
+
+### Persistent Hard False Negative
+
+The hard false-negative case `id_code 025a169a0bb0` persists in this run. Its confidence was reduced to `0.8739`, compared with `0.9291` in the val-loss-selected Bayesian model and `0.9720` in the final epoch model. That reduction is encouraging, but the case still remains a false negative and should be treated as an unresolved safety concern rather than a solved error mode.
+
+### Interpretation
+
+This result gives a plausible screening-oriented Bayesian operating point: much higher sensitivity and fewer false negatives, with a cost in calibration metrics and some loss of specificity. It is promising, but it should not be overclaimed as a definitive clinically safer model without selective-referral analysis and targeted review of high-confidence errors.
+
 The tests verify:
 
     metrics.json is created

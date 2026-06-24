@@ -398,6 +398,77 @@ The next planned step is either:
 
 1. Compare alternative best-epoch selection metrics
 2. Implement a Laplace last-layer baseline
+
+## Sensitivity-Selected Variational Bayesian Cached-Feature Result
+
+The project now has a second completed variational Bayesian cached-feature run selected by sensitivity:
+
+```text
+outputs/feature_heads/retfound_variational_bayesian_20epoch_best_sensitivity
+```
+
+### Model And Training Setup
+
+This run uses the same variational Bayesian linear-head setup as the prior Bayesian experiment:
+
+1. `20` epochs
+2. Batch size `8`
+3. Learning rate `0.001`
+4. `mc_samples_train=1`
+5. `mc_samples_eval=30`
+6. `prior_std=1.0`
+7. `kl_weight=1/2930`
+
+The change is:
+
+1. `selection_metric=sensitivity`
+
+Best epoch:
+
+1. Epoch `7`
+
+### Best Validation Metrics
+
+1. Accuracy: `0.8962`
+2. AUC: `0.9617`
+3. Sensitivity: `0.9545`
+4. Specificity: `0.8538`
+5. Balanced accuracy: `0.9042`
+6. ECE: `0.0305`
+7. NLL: `0.2710`
+8. Brier score: `0.0816`
+9. Confusion matrix: `[[181, 31], [7, 147]]`
+
+### Comparison To Cached Softmax + Temperature Scaling
+
+Relative to the cached softmax baseline after temperature scaling:
+
+1. Sensitivity improved from `0.8896` to `0.9545`
+2. False negatives decreased from `17` to `7`
+3. Accuracy improved
+4. AUC improved
+5. ECE, NLL, and Brier score were worse
+
+This makes the run important as a screening-oriented Bayesian operating point rather than a general win on every metric.
+
+### Uncertainty Separation
+
+Correct and incorrect predictions again show uncertainty separation:
+
+1. Mean confidence: correct `0.8883` vs incorrect `0.7248`
+2. Mean predictive entropy: correct `0.2789` vs incorrect `0.5376`
+3. Mean probability variance: correct `0.0021` vs incorrect `0.0053`
+4. Mean mutual information: correct `0.0067` vs incorrect `0.0130`
+
+These trends are useful, but they are still descriptive rather than sufficient for deployment-relevant conclusions.
+
+### Persistent Hard False Negative
+
+The persistent hard false-negative case `025a169a0bb0` remains present. Its confidence fell to `0.8739`, compared with `0.9291` in the val-loss-selected Bayesian model and `0.9720` in the final epoch model. This is a meaningful reduction, but not a resolution of the failure mode.
+
+### Interpretation
+
+This result is best described as a screening-oriented Bayesian operating point. It pushes sensitivity substantially higher and reduces false negatives, but it does so with weaker calibration-oriented summary metrics than the temperature-scaled deterministic baseline. It is therefore promising for further screening analysis, not a basis for overclaiming overall superiority.
 - Checkpoint: `YukunZhou/RETFound_mae_natureCFP`
 - Local checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
 - Architecture: `RETFound_mae`

@@ -395,6 +395,88 @@ The comparison standard therefore needs to remain explicit:
 
 Accepted.
 
+## Decision 008 — Treat Sensitivity-Selected Bayesian Heads As Screening-Oriented Operating Points
+
+**Date:** 2026-06-24
+
+### Decision
+
+Sensitivity-selected variational Bayesian cached-feature heads should be interpreted as screening-oriented operating points, not as blanket replacements for the temperature-scaled deterministic baseline.
+
+### Context
+
+The completed sensitivity-selected run is:
+
+```text
+outputs/feature_heads/retfound_variational_bayesian_20epoch_best_sensitivity
+```
+
+using the same Bayesian setup as the earlier run:
+
+1. Variational Bayesian linear head on cached RETFound features
+2. `20` epochs
+3. Batch size `8`
+4. Learning rate `0.001`
+5. `mc_samples_train=1`
+6. `mc_samples_eval=30`
+7. `prior_std=1.0`
+8. `kl_weight=1/2930`
+
+with:
+
+1. `selection_metric=sensitivity`
+2. Best epoch `7`
+
+Best validation metrics:
+
+1. Accuracy: `0.8962`
+2. AUC: `0.9617`
+3. Sensitivity: `0.9545`
+4. Specificity: `0.8538`
+5. Balanced accuracy: `0.9042`
+6. ECE: `0.0305`
+7. NLL: `0.2710`
+8. Brier: `0.0816`
+9. Confusion matrix: `[[181, 31], [7, 147]]`
+
+Relative to the cached softmax baseline with temperature scaling:
+
+1. Sensitivity improved from `0.8896` to `0.9545`
+2. False negatives decreased from `17` to `7`
+3. Accuracy improved
+4. AUC improved
+5. ECE, NLL, and Brier became worse
+
+The run also continued to separate correct and incorrect predictions in uncertainty space:
+
+1. Mean confidence: correct `0.8883` vs incorrect `0.7248`
+2. Mean predictive entropy: correct `0.2789` vs incorrect `0.5376`
+3. Mean probability variance: correct `0.0021` vs incorrect `0.0053`
+4. Mean mutual information: correct `0.0067` vs incorrect `0.0130`
+
+However, the persistent hard false-negative case `025a169a0bb0` remained, with confidence reduced to `0.8739` versus `0.9291` in the val-loss-selected Bayesian model and `0.9720` in the final epoch model.
+
+### Rationale
+
+This run is valuable because it shows that the Bayesian head can move to a higher-sensitivity operating point while keeping useful uncertainty separation. That is relevant for screening use cases, where missed positives are especially costly.
+
+At the same time, weaker ECE, NLL, and Brier scores mean the model is not simply better overall. The right interpretation is therefore operating-point-dependent:
+
+1. It is a stronger candidate when sensitivity is the primary target
+2. It is not automatically the preferred choice when calibration quality is the main target
+3. It still requires selective-referral and high-confidence-error analysis
+
+### Consequences
+
+- Future reporting should distinguish between val-loss-selected and sensitivity-selected Bayesian operating points.
+- Screening-oriented comparisons should explicitly report false-negative counts.
+- The persistent hard false-negative case remains a required qualitative analysis item.
+- The next useful step is either comparing multiple epoch-selection metrics systematically or implementing the Laplace last-layer baseline.
+
+### Status
+
+Accepted.
+
 ### Status
 
 Accepted.
