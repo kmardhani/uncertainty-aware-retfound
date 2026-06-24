@@ -597,6 +597,139 @@ Relative to that baseline:
 
 The sweep suggests that Bayesian hyperparameters materially affect the sensitivity-specificity-uncertainty tradeoff. That is useful for the project, because it means the Bayesian head can be tuned toward different operating goals. It does not mean that one setting dominates all others; the tradeoff remains real and should be described explicitly.
 
+## Experiment: Laplace Last-Layer Baseline And Prior-Precision Sweep
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Establish a Laplace last-layer baseline on cached RETFound features and test whether prior precision changes the screening-oriented tradeoff in a useful way.
+
+### Implementation Summary
+
+The Laplace baseline uses:
+
+1. A deterministic cached-feature linear head trained first
+2. A diagonal Laplace posterior approximation fitted afterward over the final layer
+
+This gives a lightweight Bayesian last-layer baseline without variational training.
+
+### Initial Laplace Val-Loss-Selected Run
+
+Output path:
+
+```text
+outputs/feature_heads/retfound_laplace_20epoch_best_val_loss
+```
+
+Best epoch: `15`
+
+Validation metrics:
+
+1. Accuracy: `0.8962`
+2. AUC: `0.9666`
+3. Sensitivity: `0.8636`
+4. Specificity: `0.9198`
+5. Balanced accuracy: `0.8917`
+6. ECE: `0.0972`
+7. NLL: `0.2891`
+8. Brier score: `0.0826`
+9. Confusion matrix: `[[195, 17], [21, 133]]`
+
+### Initial Laplace Sensitivity-Selected Run
+
+Output path:
+
+```text
+outputs/feature_heads/retfound_laplace_20epoch_best_sensitivity
+```
+
+Best epoch: `6`
+
+Validation metrics:
+
+1. Accuracy: `0.8962`
+2. AUC: `0.9574`
+3. Sensitivity: `0.9416`
+4. Specificity: `0.8632`
+5. Balanced accuracy: `0.9024`
+6. ECE: `0.1231`
+7. NLL: `0.3349`
+8. Brier score: `0.0971`
+9. Confusion matrix: `[[183, 29], [9, 145]]`
+
+### Prior-Precision Sweep
+
+Sweep location:
+
+```text
+outputs/feature_heads/sweeps/laplace_sensitivity_prior_precision_*/
+```
+
+Sweep values:
+
+1. `prior_precision` in `[0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]`
+
+### Best-Sensitivity Laplace Candidate
+
+Best sensitivity occurred at:
+
+1. `prior_precision=0.03`
+2. Best epoch `6`
+
+Validation metrics:
+
+1. Sensitivity: `0.9481`
+2. Specificity: `0.8632`
+3. Accuracy: `0.8989`
+4. AUC: `0.9585`
+5. Balanced accuracy: `0.9056`
+6. ECE: `0.1382`
+7. NLL: `0.3454`
+8. Brier score: `0.1002`
+9. Confusion matrix: `[[183, 29], [8, 146]]`
+
+### Better-Calibrated Laplace Sweep Candidate
+
+A somewhat better-calibrated Laplace sweep candidate occurred at:
+
+1. `prior_precision=10.0`
+2. Best epoch `6`
+
+Validation metrics:
+
+1. Sensitivity: `0.9481`
+2. Specificity: `0.8585`
+3. Accuracy: `0.8962`
+4. AUC: `0.9586`
+5. Balanced accuracy: `0.9033`
+6. ECE: `0.0900`
+7. NLL: `0.3061`
+8. Brier score: `0.0894`
+9. Confusion matrix: `[[182, 30], [8, 146]]`
+
+### Comparison Against Cached Softmax + Temperature Scaling
+
+The cached softmax plus temperature-scaled baseline had `17` false negatives.
+
+Compared with that baseline:
+
+1. The best sensitivity Laplace setting reduced false negatives from `17` to `8`
+2. ECE, NLL, and Brier score were worse
+
+### Comparison Against Variational Bayesian
+
+Relative to the variational Bayesian cached-feature results:
+
+1. Variational Bayesian remained stronger on the sensitivity-balanced-screening tradeoff
+2. Variational Bayesian achieved `6` or `7` false negatives depending on operating point
+3. The diagonal Laplace approximation did not match variational Bayesian on calibration
+
+### Interpretation
+
+The Laplace baseline is useful as a Bayesian uncertainty reference and gives a meaningful reduction in false negatives relative to the deterministic cached-feature baseline. However, this diagonal approximation did not outperform either variational Bayesian or temperature scaling on calibration-oriented metrics. It should therefore be treated as a credible baseline, not as the current preferred uncertainty method.
+
 The tests verify:
 
     metrics.json is created

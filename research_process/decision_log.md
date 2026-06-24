@@ -579,6 +579,112 @@ This means model choice should stay tied to the intended operating goal:
 
 Accepted.
 
+## Decision 010 — Treat Diagonal Laplace As A Bayesian Baseline, Not The Leading Calibration Method
+
+**Date:** 2026-06-24
+
+### Decision
+
+The diagonal Laplace last-layer approximation will be retained as a useful Bayesian baseline, but current evidence does not support treating it as the preferred calibration method over variational Bayesian or temperature scaling.
+
+### Context
+
+The Laplace implementation uses:
+
+1. A deterministic cached-feature linear head trained first
+2. A diagonal Laplace posterior approximation over the final layer afterward
+
+Initial val-loss-selected Laplace run:
+
+```text
+outputs/feature_heads/retfound_laplace_20epoch_best_val_loss
+```
+
+1. Best epoch `15`
+2. Accuracy `0.8962`
+3. AUC `0.9666`
+4. Sensitivity `0.8636`
+5. Specificity `0.9198`
+6. Balanced accuracy `0.8917`
+7. ECE `0.0972`
+8. NLL `0.2891`
+9. Brier `0.0826`
+10. Confusion matrix `[[195, 17], [21, 133]]`
+
+Initial sensitivity-selected Laplace run:
+
+```text
+outputs/feature_heads/retfound_laplace_20epoch_best_sensitivity
+```
+
+1. Best epoch `6`
+2. Accuracy `0.8962`
+3. AUC `0.9574`
+4. Sensitivity `0.9416`
+5. Specificity `0.8632`
+6. Balanced accuracy `0.9024`
+7. ECE `0.1231`
+8. NLL `0.3349`
+9. Brier `0.0971`
+10. Confusion matrix `[[183, 29], [9, 145]]`
+
+Laplace prior-precision sweep:
+
+```text
+outputs/feature_heads/sweeps/laplace_sensitivity_prior_precision_*/
+```
+
+with `prior_precision` in `[0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]`.
+
+Best sensitivity Laplace result:
+
+1. `prior_precision=0.03`
+2. Best epoch `6`
+3. Sensitivity `0.9481`
+4. Specificity `0.8632`
+5. Accuracy `0.8989`
+6. AUC `0.9585`
+7. Balanced accuracy `0.9056`
+8. ECE `0.1382`
+9. NLL `0.3454`
+10. Brier `0.1002`
+11. Confusion matrix `[[183, 29], [8, 146]]`
+
+Better-calibrated Laplace sweep candidate:
+
+1. `prior_precision=10.0`
+2. Best epoch `6`
+3. Sensitivity `0.9481`
+4. Specificity `0.8585`
+5. Accuracy `0.8962`
+6. AUC `0.9586`
+7. Balanced accuracy `0.9033`
+8. ECE `0.0900`
+9. NLL `0.3061`
+10. Brier `0.0894`
+11. Confusion matrix `[[182, 30], [8, 146]]`
+
+Relative to the cached softmax plus temperature-scaled baseline, the best sensitivity Laplace setting improved false negatives from `17` to `8`, but had worse ECE, NLL, and Brier score.
+
+Relative to the variational Bayesian results, variational Bayesian remained stronger on the sensitivity-balanced-screening tradeoff, with `6` or `7` false negatives depending on operating point.
+
+### Rationale
+
+This is enough evidence to keep Laplace in the comparison set, because it is a legitimate Bayesian uncertainty baseline and it does improve screening-style error counts over the deterministic baseline.
+
+However, the diagonal approximation did not outperform variational Bayesian or temperature scaling on calibration-oriented metrics, and it was not the strongest method on the full sensitivity-specificity tradeoff either.
+
+### Consequences
+
+- Laplace should remain in the reported baseline set.
+- Variational Bayesian remains the stronger current Bayesian method for cached-feature screening experiments.
+- Temperature scaling remains the stronger simple calibration baseline.
+- Future work on Laplace would need either a better curvature approximation or stronger posterior modeling to change this conclusion.
+
+### Status
+
+Accepted.
+
 ### Status
 
 Accepted.
