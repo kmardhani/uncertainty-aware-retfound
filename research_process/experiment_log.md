@@ -331,6 +331,93 @@ All future Bayesian-head and Laplace-head comparisons should use:
 
 as the primary deterministic reference points.
 
+## Experiment: First Variational Bayesian Cached-Feature Head
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Run the first variational Bayesian linear head on cached RETFound features and evaluate whether it improves on the cached softmax deterministic baseline while also producing uncertainty signals that separate correct from incorrect predictions.
+
+### Run Configuration
+
+Output path:
+
+```text
+outputs/feature_heads/retfound_variational_bayesian_20epoch_best_val_loss
+```
+
+Model:
+
+1. Variational Bayesian linear head on cached RETFound features
+
+Training setup:
+
+1. Epochs: `20`
+2. Batch size: `8`
+3. Learning rate: `0.001`
+4. `mc_samples_train=1`
+5. `mc_samples_eval=30`
+6. `prior_std=1.0`
+7. `kl_weight=1/2930`
+8. `selection_metric=val_loss`
+
+### Best Epoch Result
+
+Best epoch: `16`
+
+Best validation metrics:
+
+1. Accuracy: `0.8934`
+2. AUC: `0.9650`
+3. Sensitivity: `0.8831`
+4. Specificity: `0.9009`
+5. Balanced accuracy: `0.8920`
+6. ECE: `0.0216`
+7. NLL: `0.2371`
+8. Brier score: `0.0724`
+9. Confusion matrix: `[[191, 21], [18, 136]]`
+
+### Comparison Against Cached Softmax + Temperature Scaling
+
+Relative to the cached softmax baseline with temperature scaling, the variational Bayesian head improved:
+
+1. Accuracy
+2. AUC
+3. NLL
+4. Brier score
+5. Specificity
+
+At the same time:
+
+1. ECE was slightly worse
+2. Sensitivity was slightly lower
+
+This is encouraging, but it is not enough to claim that the Bayesian head is uniformly better. The result is stronger on several aggregate metrics, but the calibration and error profile still need closer analysis.
+
+### Uncertainty Separation
+
+The uncertainty summaries show meaningful separation between correct and incorrect predictions:
+
+1. Mean confidence: correct `0.9084` vs incorrect `0.6929`
+2. Mean predictive entropy: correct `0.2375` vs incorrect `0.5682`
+3. Mean probability variance: correct `0.0064` vs incorrect `0.0235`
+4. Mean mutual information: correct `0.0224` vs incorrect `0.0572`
+
+These are useful signs that the Bayesian head is capturing epistemic and predictive uncertainty in a direction consistent with error detection, but they should still be validated with selective-referral and thresholded error analyses.
+
+### Clinical Safety Caveat
+
+One high-confidence false negative remains in the current run. That means the uncertainty summaries are promising, but not sufficient on their own. Selective-referral analysis and explicit high-confidence-error analysis remain necessary before drawing stronger safety conclusions.
+
+### Next Step
+
+The next planned step is either:
+
+1. Compare alternative best-epoch selection metrics
+2. Implement the Laplace last-layer baseline
+
 The tests verify:
 
     metrics.json is created

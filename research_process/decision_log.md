@@ -319,6 +319,82 @@ The batch-size comparison also showed that batch size 32 undertrained relative t
 - Image-based baselines remain useful context, but they are secondary comparison points for frozen-feature methods.
 - Batch-size comparisons for cached-feature heads should account for optimizer-update count, not only epoch count.
 
+## Decision 007 — Evaluate Bayesian Cached-Feature Heads Against The Temperature-Scaled Deterministic Baseline
+
+**Date:** 2026-06-24
+
+### Decision
+
+The first variational Bayesian cached-feature head result will be interpreted primarily against the cached softmax plus temperature-scaled baseline, with explicit attention to both aggregate metrics and high-confidence failure modes.
+
+### Context
+
+The first completed Bayesian run is:
+
+```text
+outputs/feature_heads/retfound_variational_bayesian_20epoch_best_val_loss
+```
+
+using:
+
+1. A variational Bayesian linear head on cached RETFound features
+2. `20` epochs
+3. Batch size `8`
+4. Learning rate `0.001`
+5. `mc_samples_train=1`
+6. `mc_samples_eval=30`
+7. `prior_std=1.0`
+8. `kl_weight=1/2930`
+9. `selection_metric=val_loss`
+
+Best epoch:
+
+1. Epoch `16`
+
+Best validation metrics:
+
+1. Accuracy: `0.8934`
+2. AUC: `0.9650`
+3. Sensitivity: `0.8831`
+4. Specificity: `0.9009`
+5. Balanced accuracy: `0.8920`
+6. ECE: `0.0216`
+7. NLL: `0.2371`
+8. Brier: `0.0724`
+9. Confusion matrix: `[[191, 21], [18, 136]]`
+
+Relative to the cached softmax baseline with temperature scaling, the Bayesian run improved accuracy, AUC, NLL, Brier, and specificity, while showing slightly worse ECE and slightly lower sensitivity.
+
+The uncertainty summaries also separated correct from incorrect predictions:
+
+1. Mean confidence: correct `0.9084` vs incorrect `0.6929`
+2. Mean predictive entropy: correct `0.2375` vs incorrect `0.5682`
+3. Mean probability variance: correct `0.0064` vs incorrect `0.0235`
+4. Mean mutual information: correct `0.0224` vs incorrect `0.0572`
+
+At the same time, one high-confidence false negative remained.
+
+### Rationale
+
+This result is strong enough to justify continuing with Bayesian last-layer comparisons, but not strong enough to justify a blanket claim that the Bayesian head is safer or uniformly better than the deterministic baseline.
+
+The comparison standard therefore needs to remain explicit:
+
+1. Compare against the temperature-scaled deterministic cached-feature baseline
+2. Track both calibration and discrimination metrics
+3. Examine high-confidence errors directly
+4. Prioritize selective-referral analysis rather than relying only on global averages
+
+### Consequences
+
+- Future Bayesian comparisons should include explicit reference to the temperature-scaled deterministic cached-feature baseline.
+- High-confidence false negatives remain a required analysis target.
+- The next implementation step can reasonably be either alternative epoch-selection criteria or a Laplace last-layer baseline.
+
+### Status
+
+Accepted.
+
 ### Status
 
 Accepted.

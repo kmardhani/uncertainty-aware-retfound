@@ -322,6 +322,82 @@ For all upcoming Bayesian-head and Laplace-head experiments, the primary determi
 2. The cached-feature temperature-scaled baseline
 
 This keeps the comparison aligned with the frozen-feature experimental design rather than mixing feature-based uncertainty methods against only image-based end-to-end baselines.
+
+## First Variational Bayesian Cached-Feature Head Result
+
+The first completed variational Bayesian linear-head run on cached RETFound features is:
+
+```text
+outputs/feature_heads/retfound_variational_bayesian_20epoch_best_val_loss
+```
+
+### Model And Training Setup
+
+The model is a variational Bayesian linear head trained on cached RETFound features with:
+
+1. `20` epochs
+2. Batch size `8`
+3. Learning rate `0.001`
+4. `mc_samples_train=1`
+5. `mc_samples_eval=30`
+6. `prior_std=1.0`
+7. `kl_weight=1/2930`
+8. `selection_metric=val_loss`
+
+The selected best epoch was:
+
+1. Epoch `16`
+
+### Best Validation Metrics
+
+1. Accuracy: `0.8934`
+2. AUC: `0.9650`
+3. Sensitivity: `0.8831`
+4. Specificity: `0.9009`
+5. Balanced accuracy: `0.8920`
+6. ECE: `0.0216`
+7. NLL: `0.2371`
+8. Brier score: `0.0724`
+9. Confusion matrix: `[[191, 21], [18, 136]]`
+
+### Comparison To The Cached Softmax + Temperature-Scaled Baseline
+
+Relative to the cached softmax baseline after temperature scaling, this Bayesian run improved:
+
+1. Accuracy
+2. AUC
+3. NLL
+4. Brier score
+5. Specificity
+
+However:
+
+1. ECE was slightly worse
+2. Sensitivity was slightly lower
+
+This should be interpreted as a strong first Bayesian result, not as proof that the Bayesian head dominates the deterministic baseline on every clinically relevant axis.
+
+### Uncertainty Separation
+
+The run also showed useful separation between correct and incorrect predictions:
+
+1. Mean confidence: correct `0.9084` vs incorrect `0.6929`
+2. Mean predictive entropy: correct `0.2375` vs incorrect `0.5682`
+3. Mean probability variance: correct `0.0064` vs incorrect `0.0235`
+4. Mean mutual information: correct `0.0224` vs incorrect `0.0572`
+
+These trends are consistent with uncertainty becoming larger on errors, which is encouraging for later selective-referral analysis.
+
+### Safety Caveat
+
+One high-confidence false negative still remains in this run. That is an important clinical caveat. The current result supports deeper uncertainty analysis, but it does not justify overclaiming safety or reliability from aggregate metrics alone.
+
+### Next Step
+
+The next planned step is either:
+
+1. Compare alternative best-epoch selection metrics
+2. Implement a Laplace last-layer baseline
 - Checkpoint: `YukunZhou/RETFound_mae_natureCFP`
 - Local checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
 - Architecture: `RETFound_mae`
