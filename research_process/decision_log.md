@@ -745,6 +745,80 @@ The strongest current operating points therefore remain the single Bayesian mode
 
 Accepted.
 
+## Decision 012 — Treat Selective Referral As The Strongest Current Safety Lever
+
+**Date:** 2026-06-24
+
+### Decision
+
+Selective referral based on uncertainty ranking should be treated as the strongest current safety-oriented result in the project, and it should be prioritized over naive ensemble voting for follow-up analysis.
+
+### Context
+
+Selective referral was evaluated with:
+
+```text
+scripts/analysis/evaluate_selective_referral.py
+```
+
+using:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.001_prior_2.0/best_validation_predictions.csv
+```
+
+Generated outputs:
+
+1. `outputs/selective_referral/bayes_max_sensitivity_confidence.csv`
+2. `outputs/selective_referral/bayes_max_sensitivity_predictive_entropy.csv`
+3. `outputs/selective_referral/bayes_max_sensitivity_probability_variance.csv`
+4. `outputs/selective_referral/bayes_max_sensitivity_mutual_information.csv`
+
+Baseline without deferral:
+
+1. Coverage `1.0`
+2. Accuracy `0.8934`
+3. Sensitivity `0.9610`
+4. Specificity `0.8443`
+5. False negatives `6`
+6. False positives `33`
+
+Selected referral results:
+
+Confidence / predictive entropy:
+
+1. Around `90%` coverage: deferred `36`, accepted `330`, false negatives `3`, sensitivity `0.9790`, specificity `0.8663`, accuracy `0.9152`
+2. Around `80%` coverage: deferred `73`, accepted `293`, false negatives `1`, sensitivity `0.9922`, specificity `0.9085`, accuracy `0.9454`
+3. Around `70%` coverage: deferred `109`, accepted `257`, false negatives `1`, sensitivity `0.9914`, specificity `0.9291`, accuracy `0.9572`
+
+Mutual information:
+
+1. Around `80%` coverage: deferred `73`, accepted `293`, false negatives `1`, sensitivity `0.9924`, specificity `0.8696`, accuracy `0.9249`
+2. Around `70%` coverage: deferred `109`, accepted `257`, false negatives `0`, sensitivity `1.0000`, specificity `0.8944`, accuracy `0.9416`
+
+Probability variance:
+
+1. Around `80%` coverage: deferred `73`, accepted `293`, false negatives `1`, sensitivity `0.9925`, specificity `0.9057`, accuracy `0.9454`
+
+### Rationale
+
+This is the clearest current evidence that uncertainty is useful for safety-oriented decision support in this project.
+
+The main result is not that the classifier became universally better. The main result is that deferring uncertain cases can materially reduce false negatives among the accepted automated decisions. That is more aligned with a real screening workflow than simply comparing full-coverage summary metrics.
+
+At the same time, this only shifts part of the burden to human review. Accepted-case metrics are not population-wide performance metrics, and the deferred cases still need clinical handling.
+
+### Consequences
+
+- Selective-referral analysis should become a primary evaluation axis for future Bayesian and Laplace comparisons.
+- Naive ensemble voting is lower priority than uncertainty-based defer-to-human policies.
+- Future reporting must clearly separate accepted-case performance from full-population performance.
+- These results should be described as offline validation evidence for triage-style workflows, not as clinical validation.
+
+### Status
+
+Accepted.
+
 ### Status
 
 Accepted.

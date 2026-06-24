@@ -783,6 +783,118 @@ The ensemble rules did not improve on the strongest single-model Bayesian operat
 2. The best balanced screening operating point remains `bayes_balanced`
 3. Simple ensemble referral policies did not improve safety beyond the best single Bayesian operating point
 
+## Experiment: Selective Referral / Defer-To-Human Analysis
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Evaluate whether uncertainty-based selective referral can improve the clinical safety profile of the strongest maximum-sensitivity Bayesian model by deferring uncertain cases to human review.
+
+### Analysis Script And Inputs
+
+Selective referral script:
+
+```text
+scripts/analysis/evaluate_selective_referral.py
+```
+
+Analyzed model:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.001_prior_2.0/best_validation_predictions.csv
+```
+
+Output files:
+
+1. `outputs/selective_referral/bayes_max_sensitivity_confidence.csv`
+2. `outputs/selective_referral/bayes_max_sensitivity_predictive_entropy.csv`
+3. `outputs/selective_referral/bayes_max_sensitivity_probability_variance.csv`
+4. `outputs/selective_referral/bayes_max_sensitivity_mutual_information.csv`
+
+### Baseline Without Deferral
+
+At full coverage:
+
+1. Coverage: `1.0`
+2. Accuracy: `0.8934`
+3. Sensitivity: `0.9610`
+4. Specificity: `0.8443`
+5. False negatives: `6`
+6. False positives: `33`
+
+### Confidence / Predictive Entropy Selective Referral
+
+At approximately `90%` coverage:
+
+1. Deferred: `36`
+2. Accepted: `330`
+3. False negatives: `3`
+4. Sensitivity: `0.9790`
+5. Specificity: `0.8663`
+6. Accuracy: `0.9152`
+
+At approximately `80%` coverage:
+
+1. Deferred: `73`
+2. Accepted: `293`
+3. False negatives: `1`
+4. Sensitivity: `0.9922`
+5. Specificity: `0.9085`
+6. Accuracy: `0.9454`
+
+At approximately `70%` coverage:
+
+1. Deferred: `109`
+2. Accepted: `257`
+3. False negatives: `1`
+4. Sensitivity: `0.9914`
+5. Specificity: `0.9291`
+6. Accuracy: `0.9572`
+
+### Mutual Information Selective Referral
+
+At approximately `80%` coverage:
+
+1. Deferred: `73`
+2. Accepted: `293`
+3. False negatives: `1`
+4. Sensitivity: `0.9924`
+5. Specificity: `0.8696`
+6. Accuracy: `0.9249`
+
+At approximately `70%` coverage:
+
+1. Deferred: `109`
+2. Accepted: `257`
+3. False negatives: `0`
+4. Sensitivity: `1.0000`
+5. Specificity: `0.8944`
+6. Accuracy: `0.9416`
+
+### Probability Variance Selective Referral
+
+At approximately `80%` coverage:
+
+1. Deferred: `73`
+2. Accepted: `293`
+3. False negatives: `1`
+4. Sensitivity: `0.9925`
+5. Specificity: `0.9057`
+6. Accuracy: `0.9454`
+
+### Interpretation
+
+This is the strongest clinical-safety result so far in the project.
+
+1. Deferring the most uncertain `20%` of cases reduces false negatives from `6` to `1`
+2. Deferring the most uncertain `30%` using mutual information eliminates false negatives among accepted automated decisions
+3. This gain comes at the cost of human review for deferred cases
+4. Accepted-case metrics should not be interpreted as full-population performance; they describe performance only on non-deferred cases
+
+The result is promising for a screening-style defer-to-human workflow, but it should not be overclaimed as clinical validation. It is still an offline validation result on one dataset split, not proof of deployment readiness.
+
 The tests verify:
 
     metrics.json is created

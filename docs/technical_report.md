@@ -753,6 +753,103 @@ The strongest conclusions from this comparison are:
 3. Simple ensemble referral policies did not improve safety beyond the best single Bayesian operating point
 
 This is useful because it narrows the next research step. More complex decision logic may still be worth exploring later, but naive combination rules were not enough.
+
+## Selective Referral Analysis
+
+The project now includes an uncertainty-based selective referral analysis implemented in:
+
+```text
+scripts/analysis/evaluate_selective_referral.py
+```
+
+The analyzed prediction file was:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.001_prior_2.0/best_validation_predictions.csv
+```
+
+Generated outputs:
+
+1. `outputs/selective_referral/bayes_max_sensitivity_confidence.csv`
+2. `outputs/selective_referral/bayes_max_sensitivity_predictive_entropy.csv`
+3. `outputs/selective_referral/bayes_max_sensitivity_probability_variance.csv`
+4. `outputs/selective_referral/bayes_max_sensitivity_mutual_information.csv`
+
+### Baseline Without Deferral
+
+At full coverage:
+
+1. Coverage: `1.0`
+2. Accuracy: `0.8934`
+3. Sensitivity: `0.9610`
+4. Specificity: `0.8443`
+5. False negatives: `6`
+6. False positives: `33`
+
+### Confidence / Predictive Entropy Referral
+
+At roughly `90%` coverage:
+
+1. Deferred `36`, accepted `330`
+2. False negatives `3`
+3. Sensitivity `0.9790`
+4. Specificity `0.8663`
+5. Accuracy `0.9152`
+
+At roughly `80%` coverage:
+
+1. Deferred `73`, accepted `293`
+2. False negatives `1`
+3. Sensitivity `0.9922`
+4. Specificity `0.9085`
+5. Accuracy `0.9454`
+
+At roughly `70%` coverage:
+
+1. Deferred `109`, accepted `257`
+2. False negatives `1`
+3. Sensitivity `0.9914`
+4. Specificity `0.9291`
+5. Accuracy `0.9572`
+
+### Mutual Information Referral
+
+At roughly `80%` coverage:
+
+1. Deferred `73`, accepted `293`
+2. False negatives `1`
+3. Sensitivity `0.9924`
+4. Specificity `0.8696`
+5. Accuracy `0.9249`
+
+At roughly `70%` coverage:
+
+1. Deferred `109`, accepted `257`
+2. False negatives `0`
+3. Sensitivity `1.0000`
+4. Specificity `0.8944`
+5. Accuracy `0.9416`
+
+### Probability Variance Referral
+
+At roughly `80%` coverage:
+
+1. Deferred `73`, accepted `293`
+2. False negatives `1`
+3. Sensitivity `0.9925`
+4. Specificity `0.9057`
+5. Accuracy `0.9454`
+
+### Interpretation
+
+This is the strongest clinical-safety result achieved so far in the repository.
+
+1. Deferring the most uncertain `20%` of cases reduces false negatives from `6` to `1`
+2. Deferring the most uncertain `30%` of cases using mutual information eliminates false negatives among accepted automated decisions
+3. The tradeoff is that deferred cases still require human review
+4. Accepted-case metrics are not full-population metrics; they only describe performance on the non-deferred subset
+
+This is a strong screening-oriented result, but it should still be described cautiously. It is evidence that uncertainty ranking may support safer automation triage on this validation split, not evidence of external clinical validation or deployment readiness.
 - Checkpoint: `YukunZhou/RETFound_mae_natureCFP`
 - Local checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
 - Architecture: `RETFound_mae`
