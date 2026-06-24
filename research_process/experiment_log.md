@@ -1422,3 +1422,92 @@ The clearest comparison is:
 - Threshold-tuned softmax screening at the zero-false-negative operating point had accuracy `0.7596`, specificity `0.5849`, `88` false positives, and referral rate `0.6612`.
 
 Threshold tuning and selective referral therefore represent different clinical workflows and should be compared using both human-review burden and accepted-case safety. The current result strengthens the argument for defer-to-human uncertainty routing, but it does not justify overclaiming that Bayesian heads are uniquely necessary for false-negative control.
+
+## Experiment: DDR external validation
+
+### Objective
+
+Run the first external-validation pass on DDR to test whether the APTOS uncertainty and selective-referral findings transfer to a harder retinal screening dataset.
+
+### DDR metadata and feature export
+
+- Prepared metadata: `data/processed/ddr_referable_dr_metadata_splits.csv`
+- Labeled grading images: `12,522`
+- Diagnosis counts: `0=6266`, `1=630`, `2=4477`, `3=236`, `4=913`
+- Binary label counts: non-referable `6896`, referable `5626`
+- Split counts: train `8765`, val `1878`, test `1879`
+- Validation label counts: non-referable `1034`, referable `844`
+- RETFound feature export: `outputs/features/ddr_retfound_mae_natureCFP`
+- Feature shapes: train `(8765, 1024)`, val `(1878, 1024)`, test `(1879, 1024)`
+
+### DDR deterministic baseline
+
+- Softmax baseline output: `outputs/feature_heads/ddr_retfound_softmax_linear_10epoch_bs16`
+- Accuracy `0.7939`
+- AUC `0.8688`
+- Sensitivity `0.7773`
+- Specificity `0.8075`
+- Balanced accuracy `0.7924`
+- ECE `0.0223`
+- NLL `0.4504`
+- Brier `0.1472`
+- Confusion matrix `[[835, 199], [188, 656]]`
+
+### DDR temperature scaling
+
+- Learned temperature: `0.9173`
+- ECE improved from `0.0223` to `0.0198`
+- NLL improved from `0.4504` to `0.4495`
+- Brier improved from `0.1472` to `0.1470`
+- Threshold-dependent classification metrics were unchanged
+
+### DDR variational Bayesian results
+
+- Val-loss selected output: `outputs/feature_heads/ddr_retfound_variational_bayesian_20epoch_best_val_loss`
+- Best epoch: `20`
+- Accuracy `0.7966`
+- AUC `0.8782`
+- Sensitivity `0.7275`
+- Specificity `0.8530`
+- Balanced accuracy `0.7902`
+- ECE `0.0174`
+- NLL `0.4357`
+- Brier `0.1420`
+- Confusion matrix `[[882, 152], [230, 614]]`
+
+- Sensitivity-selected output: `outputs/feature_heads/ddr_retfound_variational_bayesian_20epoch_best_sensitivity`
+- Best epoch: `11`
+- Accuracy `0.7678`
+- AUC `0.8634`
+- Sensitivity `0.8472`
+- Specificity `0.7031`
+- Balanced accuracy `0.7751`
+- ECE `0.0097`
+- NLL `0.4776`
+- Brier `0.1567`
+- Confusion matrix `[[727, 307], [129, 715]]`
+
+### Core interpretation
+
+DDR is a harder external-validation dataset than APTOS. The sensitivity-selected Bayesian operating point reduced DDR false negatives from `188` to `129` relative to the default softmax operating point, a `31.4%` relative reduction. This reproduces the qualitative APTOS pattern, but with a weaker effect and lower specificity.
+
+### DDR threshold-sweep control
+
+- Threshold-sweep outputs were written under `outputs/threshold_sweeps/ddr/`
+- Temperature-scaled softmax threshold `0.03` achieved zero false negatives, but with specificity `0.1025`, `928` false positives, referral rate `0.9436`, and accuracy `0.5059`
+- Temperature-scaled softmax threshold `0.10` achieved `11` false negatives, but with specificity `0.3153`, `708` false positives, referral rate `0.8206`, and accuracy `0.6171`
+
+Interpretation: threshold tuning can reduce or eliminate false negatives, but only with very high referral burden and poor specificity.
+
+### DDR selective referral
+
+- Selective-referral outputs were written under `outputs/selective_referral/ddr/`
+- For the Bayesian sensitivity-selected model, confidence and predictive entropy produced identical results
+- At `90%` coverage: deferred `187`, false negatives `94`, sensitivity `0.8789`, specificity `0.7301`, accuracy `0.7983`
+- At `80%` coverage: deferred `375`, false negatives `72`, sensitivity `0.8966`, specificity `0.7596`, accuracy `0.8230`
+- At `70%` coverage: deferred `563`, false negatives `45`, sensitivity `0.9266`, specificity `0.7806`, accuracy `0.8487`
+- Mutual information and probability variance were less effective than confidence and predictive entropy on DDR
+
+### Conclusion
+
+DDR externally validates the qualitative direction of the APTOS result: uncertainty-aware selective referral reduces false negatives among accepted automated decisions. However, DDR does not reproduce the APTOS zero-false-negative result at practical coverage levels. The stronger final claim should therefore remain that uncertainty-aware selective referral improves the safety/coverage tradeoff, not that Bayesian layers uniquely eliminate false negatives.

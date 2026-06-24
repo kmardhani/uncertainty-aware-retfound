@@ -981,3 +981,58 @@ Limitations:
 - Report human-review burden alongside sensitivity-focused operating points.
 
 - Continue treating selective referral, not zero false negatives alone, as the main safety-oriented Bayesian result.
+
+
+## Decision: Use DDR as an External-Validation Constraint on Final Claims
+
+**Date:** 2026-06-24
+
+**Status:** Accepted
+
+### Context
+
+The project extended beyond APTOS to the DDR diabetic retinopathy grading dataset. DDR metadata was prepared in `data/processed/ddr_referable_dr_metadata_splits.csv` with `12,522` labeled images, binary referable-DR labels, and train/val/test splits of `8765 / 1878 / 1879`. Frozen RETFound features were exported to `outputs/features/ddr_retfound_mae_natureCFP` with shapes `(8765, 1024)`, `(1878, 1024)`, and `(1879, 1024)`.
+
+The DDR deterministic baseline at `outputs/feature_heads/ddr_retfound_softmax_linear_10epoch_bs16` achieved accuracy `0.7939`, AUC `0.8688`, sensitivity `0.7773`, specificity `0.8075`, and confusion matrix `[[835, 199], [188, 656]]`.
+
+The DDR sensitivity-selected variational Bayesian operating point at `outputs/feature_heads/ddr_retfound_variational_bayesian_20epoch_best_sensitivity` improved sensitivity to `0.8472` and reduced false negatives from `188` to `129`, a `31.4%` relative reduction, but lowered specificity to `0.7031`.
+
+DDR threshold-sweep controls under `outputs/threshold_sweeps/ddr/` showed that threshold tuning could also drive false negatives very low or to zero, but only with very poor specificity and extremely high referral burden. DDR selective-referral analyses under `outputs/selective_referral/ddr/` showed that confidence and predictive entropy still improved the safety/coverage tradeoff among accepted automated cases, but did not reproduce the APTOS zero-false-negative result at practical coverage levels.
+
+### Decision
+
+Use DDR as an external-validation constraint on the project’s final claims.
+
+The project should describe DDR as qualitative external validation of the APTOS direction, not as a replication of the strongest APTOS outcome. The final claim should remain focused on uncertainty-aware selective referral improving the safety/coverage tradeoff, rather than claiming that Bayesian layers uniquely eliminate false negatives.
+
+### Rationale
+
+DDR is materially harder than APTOS, and that matters for honest interpretation.
+
+The Bayesian sensitivity-selected operating point still reduced false negatives relative to the default softmax baseline, which supports the qualitative direction of the APTOS result. However, the effect was weaker, the specificity cost was larger, and the practical zero-false-negative operating point still required unacceptable referral burden under threshold tuning. The selective-referral result remains useful, but it is not universal evidence that the strongest APTOS behavior transfers unchanged across datasets.
+
+### Consequences
+
+Positive consequences:
+
+- The final narrative is more externally grounded.
+
+- The project now has evidence that the uncertainty/selective-referral direction generalizes qualitatively beyond APTOS.
+
+- The study claim is better calibrated to cross-dataset evidence.
+
+Limitations:
+
+- DDR does not reproduce the APTOS zero-false-negative result at practical coverage levels.
+
+- These findings still do not constitute clinical validation.
+
+- Additional external datasets are still needed before making broader robustness claims.
+
+### Follow-up Actions
+
+- Treat DDR as the main external-validation reference point in the current write-up.
+
+- Compare future methods using both APTOS and DDR when possible.
+
+- Keep threshold-sweep and selective-referral controls in all future external-validation analyses.
