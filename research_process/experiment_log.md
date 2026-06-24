@@ -1355,3 +1355,39 @@ The run produced `validation_predictions.csv` with one row per validation exampl
 - `is_correct`
 
 This file enables threshold analysis, calibration curves, selective prediction analysis, and high-confidence error analysis.
+
+## Experiment: Consolidated experiment summary tables
+
+### Objective
+
+Add `scripts/analysis/build_experiment_summary_tables.py` to consolidate the main APTOS/RETFound results into shared CSV/JSON tables for easier comparison across deterministic, Bayesian, Laplace, decision-policy, and selective-referral analyses.
+
+### Outputs
+
+- `outputs/summary_tables/model_comparison.csv`
+- `outputs/summary_tables/decision_policy_comparison.csv`
+- `outputs/summary_tables/selective_referral_summary.csv`
+- `outputs/summary_tables/summary_tables.json`
+
+### Consolidated findings
+
+- Cached softmax + temperature scaling remains the main deterministic baseline, with accuracy `0.8798`, AUC `0.9580`, sensitivity `0.8896`, specificity `0.8726`, ECE `0.0186`, NLL `0.2558`, Brier `0.0798`, and `17` false negatives.
+- The variational Bayesian max-sensitivity operating point improved sensitivity to `0.9610`, with accuracy `0.8934`, AUC `0.9613`, specificity `0.8443`, and `6` false negatives.
+- The variational Bayesian balanced operating point produced the strongest aggregate tradeoff, with accuracy `0.9016`, AUC `0.9617`, sensitivity `0.9545`, specificity `0.8632`, balanced accuracy `0.9089`, and `7` false negatives.
+- The best sensitivity-oriented Laplace operating point reached sensitivity `0.9481`, specificity `0.8632`, and `8` false negatives, which kept it competitive as a Bayesian baseline but still behind the strongest variational Bayesian settings.
+
+### Decision-policy comparison
+
+- The OR rule did not reduce false negatives below the best single Bayesian max-sensitivity model; both had `6` false negatives, but the OR rule increased false positives and referral rate.
+- Majority vote did not improve over the Bayesian balanced operating point.
+- The AND rule improved specificity but reduced sensitivity and is not suitable for screening-oriented referral.
+
+### Selective-referral comparison
+
+- At about `80%` coverage using confidence or predictive entropy, false negatives dropped from `6` to `1`, accuracy improved to `0.9454`, and specificity improved to `0.9085`.
+- At about `70%` coverage using mutual information, false negatives dropped to `0` among accepted automated decisions, with accuracy `0.9416` and specificity `0.8944`.
+- Selective referral is therefore the strongest clinical-safety result in the current APTOS/RETFound study.
+
+### Interpretation
+
+The consolidated tables make it easier to compare the main operating points without reopening each run directory by hand. The interpretation is still bounded: accepted-case selective-referral metrics are conditional on non-deferred cases rather than full-population performance, and all current findings are still single-dataset results that need external validation.
