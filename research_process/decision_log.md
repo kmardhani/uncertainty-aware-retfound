@@ -477,6 +477,108 @@ At the same time, weaker ECE, NLL, and Brier scores mean the model is not simply
 
 Accepted.
 
+## Decision 009 — Use Bayesian Hyperparameters To Explore Operating-Point Tradeoffs, Not To Search For A Universal Winner
+
+**Date:** 2026-06-24
+
+### Decision
+
+Bayesian hyperparameter sweeps should be interpreted as a way to map operating-point tradeoffs among sensitivity, specificity, calibration, and uncertainty behavior, rather than as a search for one universally best model.
+
+### Context
+
+The Bayesian sweep is stored at:
+
+```text
+outputs/feature_heads/sweeps/
+```
+
+It varied:
+
+1. `kl_weight` in `[0.00003, 0.0001, 0.000341, 0.001]`
+2. `prior_std` in `[0.5, 1.0, 2.0]`
+
+All runs used:
+
+1. `selection_metric=sensitivity`
+2. `20` epochs
+3. Batch size `8`
+4. Learning rate `0.001`
+5. `mc_samples_train=1`
+6. `mc_samples_eval=30`
+
+Two informative sweep candidates were:
+
+Maximum-sensitivity candidate:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.001_prior_2.0
+```
+
+1. Best epoch `7`
+2. Accuracy `0.8934`
+3. AUC `0.9613`
+4. Sensitivity `0.9610`
+5. Specificity `0.8443`
+6. Balanced accuracy `0.9027`
+7. ECE `0.0320`
+8. NLL `0.2794`
+9. Brier `0.0842`
+10. Confusion matrix `[[179, 33], [6, 148]]`
+
+Balanced screening candidate:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.00003_prior_2.0
+```
+
+1. Best epoch `7`
+2. Accuracy `0.9016`
+3. AUC `0.9617`
+4. Sensitivity `0.9545`
+5. Specificity `0.8632`
+6. Balanced accuracy `0.9089`
+7. ECE `0.0275`
+8. NLL `0.2639`
+9. Brier `0.0796`
+10. Confusion matrix `[[183, 29], [7, 147]]`
+
+Relative to the cached softmax plus temperature-scaled baseline with sensitivity `0.8896` and `17` false negatives:
+
+1. The maximum-sensitivity Bayesian candidate reduced false negatives to `6`
+2. The balanced Bayesian candidate reduced false negatives to `7`
+3. The balanced Bayesian candidate also improved accuracy and balanced accuracy
+
+The maximum-sensitivity candidate also retained useful uncertainty separation:
+
+1. Mean confidence: correct `0.8853` vs incorrect `0.7253`
+2. Mean predictive entropy: correct `0.2841` vs incorrect `0.5356`
+3. Mean probability variance: correct `0.0055` vs incorrect `0.0139`
+4. Mean mutual information: correct `0.0179` vs incorrect `0.0344`
+
+The persistent hard false-negative case `025a169a0bb0` still remained incorrect, although its confidence decreased to `0.8498`.
+
+### Rationale
+
+The sweep shows that Bayesian hyperparameters materially affect the screening-oriented operating point. Higher-regularization and larger-prior settings can push the model toward fewer false negatives, but that comes with real tradeoffs in specificity and calibration summaries. A more balanced setting may recover some overall performance while giving up some of the strongest uncertainty separation.
+
+This means model choice should stay tied to the intended operating goal:
+
+1. Maximum-sensitivity setting when missed positives are the main concern
+2. More balanced setting when overall operating-point quality matters more
+3. Neither setting should be described as universally best
+
+### Consequences
+
+- Future sweep reports should describe tradeoffs explicitly instead of only reporting the single top metric.
+- False-negative counts should remain a first-class comparison target.
+- Uncertainty separation should be tracked alongside calibration summaries, because the best classification tradeoff may not yield the strongest uncertainty signal.
+- The next step remains either deeper selection-metric comparison or implementation of the Laplace last-layer baseline.
+
+### Status
+
+Accepted.
+
 ### Status
 
 Accepted.

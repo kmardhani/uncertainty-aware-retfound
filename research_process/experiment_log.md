@@ -497,6 +497,106 @@ The hard false-negative case `id_code 025a169a0bb0` persists in this run. Its co
 
 This result gives a plausible screening-oriented Bayesian operating point: much higher sensitivity and fewer false negatives, with a cost in calibration metrics and some loss of specificity. It is promising, but it should not be overclaimed as a definitive clinically safer model without selective-referral analysis and targeted review of high-confidence errors.
 
+## Experiment: Bayesian Hyperparameter Sweep For Sensitivity-Selected Cached-Feature Heads
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Measure how Bayesian hyperparameters change the sensitivity-specificity-calibration-uncertainty tradeoff for cached-feature variational Bayesian heads when model selection is based on sensitivity.
+
+### Sweep Setup
+
+Sweep location:
+
+```text
+outputs/feature_heads/sweeps/
+```
+
+The sweep varied:
+
+1. `kl_weight` in `[0.00003, 0.0001, 0.000341, 0.001]`
+2. `prior_std` in `[0.5, 1.0, 2.0]`
+
+All runs used:
+
+1. `selection_metric=sensitivity`
+2. `20` epochs
+3. Batch size `8`
+4. Learning rate `0.001`
+5. `mc_samples_train=1`
+6. `mc_samples_eval=30`
+
+### Maximum-Sensitivity Candidate
+
+Output path:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.001_prior_2.0
+```
+
+Best epoch: `7`
+
+Validation metrics:
+
+1. Accuracy: `0.8934`
+2. AUC: `0.9613`
+3. Sensitivity: `0.9610`
+4. Specificity: `0.8443`
+5. Balanced accuracy: `0.9027`
+6. ECE: `0.0320`
+7. NLL: `0.2794`
+8. Brier score: `0.0842`
+9. Confusion matrix: `[[179, 33], [6, 148]]`
+
+Uncertainty separation:
+
+1. Mean confidence: correct `0.8853` vs incorrect `0.7253`
+2. Mean predictive entropy: correct `0.2841` vs incorrect `0.5356`
+3. Mean probability variance: correct `0.0055` vs incorrect `0.0139`
+4. Mean mutual information: correct `0.0179` vs incorrect `0.0344`
+
+The persistent hard false-negative case `025a169a0bb0` remained incorrect, but its confidence decreased further to `0.8498`.
+
+### Balanced Screening Candidate
+
+Output path:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.00003_prior_2.0
+```
+
+Best epoch: `7`
+
+Validation metrics:
+
+1. Accuracy: `0.9016`
+2. AUC: `0.9617`
+3. Sensitivity: `0.9545`
+4. Specificity: `0.8632`
+5. Balanced accuracy: `0.9089`
+6. ECE: `0.0275`
+7. NLL: `0.2639`
+8. Brier score: `0.0796`
+9. Confusion matrix: `[[183, 29], [7, 147]]`
+
+This candidate gives a better overall balance than the maximum-sensitivity setting, but the posterior uncertainty signal is weaker.
+
+### Comparison Against Cached Softmax + Temperature Scaling
+
+The cached softmax plus temperature-scaled baseline had sensitivity `0.8896` with `17` false negatives.
+
+Relative to that baseline:
+
+1. The maximum-sensitivity Bayesian candidate reduced false negatives from `17` to `6`
+2. The balanced Bayesian candidate reduced false negatives from `17` to `7`
+3. The balanced Bayesian candidate also improved accuracy and balanced accuracy
+
+### Interpretation
+
+The sweep suggests that Bayesian hyperparameters materially affect the sensitivity-specificity-uncertainty tradeoff. That is useful for the project, because it means the Bayesian head can be tuned toward different operating goals. It does not mean that one setting dominates all others; the tradeoff remains real and should be described explicitly.
+
 The tests verify:
 
     metrics.json is created

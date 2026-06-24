@@ -469,6 +469,106 @@ The persistent hard false-negative case `025a169a0bb0` remains present. Its conf
 ### Interpretation
 
 This result is best described as a screening-oriented Bayesian operating point. It pushes sensitivity substantially higher and reduces false negatives, but it does so with weaker calibration-oriented summary metrics than the temperature-scaled deterministic baseline. It is therefore promising for further screening analysis, not a basis for overclaiming overall superiority.
+
+## Bayesian Hyperparameter Sweep
+
+The project now includes a small hyperparameter sweep over variational Bayesian cached-feature heads at:
+
+```text
+outputs/feature_heads/sweeps/
+```
+
+### Sweep Design
+
+The sweep varied:
+
+1. `kl_weight` in `[0.00003, 0.0001, 0.000341, 0.001]`
+2. `prior_std` in `[0.5, 1.0, 2.0]`
+
+All runs used:
+
+1. `selection_metric=sensitivity`
+2. `20` epochs
+3. Batch size `8`
+4. Learning rate `0.001`
+5. `mc_samples_train=1`
+6. `mc_samples_eval=30`
+
+### Maximum-Sensitivity Candidate
+
+The highest-sensitivity candidate is:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.001_prior_2.0
+```
+
+Best epoch:
+
+1. Epoch `7`
+
+Validation metrics:
+
+1. Accuracy: `0.8934`
+2. AUC: `0.9613`
+3. Sensitivity: `0.9610`
+4. Specificity: `0.8443`
+5. Balanced accuracy: `0.9027`
+6. ECE: `0.0320`
+7. NLL: `0.2794`
+8. Brier score: `0.0842`
+9. Confusion matrix: `[[179, 33], [6, 148]]`
+
+Uncertainty separation:
+
+1. Mean confidence: correct `0.8853` vs incorrect `0.7253`
+2. Mean predictive entropy: correct `0.2841` vs incorrect `0.5356`
+3. Mean probability variance: correct `0.0055` vs incorrect `0.0139`
+4. Mean mutual information: correct `0.0179` vs incorrect `0.0344`
+
+The persistent hard false-negative case `025a169a0bb0` still remains, but its confidence drops to `0.8498`.
+
+### Balanced Screening Candidate
+
+A more balanced screening candidate is:
+
+```text
+outputs/feature_heads/sweeps/bayes_sensitivity_kl_0.00003_prior_2.0
+```
+
+Best epoch:
+
+1. Epoch `7`
+
+Validation metrics:
+
+1. Accuracy: `0.9016`
+2. AUC: `0.9617`
+3. Sensitivity: `0.9545`
+4. Specificity: `0.8632`
+5. Balanced accuracy: `0.9089`
+6. ECE: `0.0275`
+7. NLL: `0.2639`
+8. Brier score: `0.0796`
+9. Confusion matrix: `[[183, 29], [7, 147]]`
+
+This candidate preserves most of the sensitivity gain while improving overall balance, but it appears to have a weaker posterior uncertainty signal.
+
+### Comparison To Cached Softmax + Temperature Scaling
+
+The cached softmax plus temperature-scaled baseline had:
+
+1. Sensitivity `0.8896`
+2. False negatives `17`
+
+Compared with that baseline:
+
+1. The maximum-sensitivity Bayesian candidate reduced false negatives from `17` to `6`
+2. The balanced Bayesian candidate reduced false negatives from `17` to `7`
+3. The balanced Bayesian candidate also improved accuracy and balanced accuracy
+
+### Interpretation
+
+The sweep suggests that Bayesian hyperparameters meaningfully change the operating point. In practice, they affect the tradeoff among sensitivity, specificity, calibration summaries, and uncertainty behavior. That is useful evidence for the project, but it should not be overinterpreted as proof that Bayesian heads automatically outperform deterministic baselines in every regime.
 - Checkpoint: `YukunZhou/RETFound_mae_natureCFP`
 - Local checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
 - Architecture: `RETFound_mae`
