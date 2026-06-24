@@ -66,6 +66,26 @@ Expected layout:
       test_images/
         *.png
 
+For DDR, place the Kaggle grading download under:
+
+    data/raw/ddr/
+
+Expected layout:
+
+    data/raw/ddr/
+      DR_grading.csv
+      DR_grading/
+        DR_grading/
+          *.jpg
+
+The current DDR Kaggle grading download is expected to contain:
+
+    12,522 labeled grading rows
+    12,524 image files
+    2 extra unlabeled image files
+
+The extra unlabeled images are ignored during metadata preparation because only rows present in `DR_grading.csv` are used.
+
 Prepared metadata outputs should be written under:
 
     data/processed/
@@ -94,6 +114,29 @@ The expected full APTOS training metadata size is approximately:
     3662 rows
 
 The exact row count should be confirmed from the downloaded train.csv.
+
+Prepare DDR metadata splits with:
+
+    uv run python scripts/data/prepare_ddr_metadata.py \
+      --labels-csv data/raw/ddr/DR_grading.csv \
+      --image-root data/raw/ddr/DR_grading/DR_grading \
+      --output-csv data/processed/ddr_referable_dr_metadata_splits.csv
+
+By default, the DDR script:
+
+    maps referable DR as diagnosis >= 2
+    verifies that every labeled image exists under the image root
+    ignores extra images that are not listed in DR_grading.csv
+    fails if any labeled image is missing
+    creates stratified 70/15/15 train/val/test splits
+
+If the DDR download is incomplete and you want to drop missing labeled rows instead of failing, run:
+
+    uv run python scripts/data/prepare_ddr_metadata.py \
+      --labels-csv data/raw/ddr/DR_grading.csv \
+      --image-root data/raw/ddr/DR_grading/DR_grading \
+      --output-csv data/processed/ddr_referable_dr_metadata_splits.csv \
+      --allow-missing-images
 
 ## Image Path Validation on Cluster
 
