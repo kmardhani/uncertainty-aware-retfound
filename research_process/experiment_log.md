@@ -258,6 +258,79 @@ The CLI supports:
 
 The CLI is covered by tests using fake PNG images under temporary directories.
 
+## Experiment: RETFound Feature Export and Cached-Feature Linear Head Baseline
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Complete the first frozen-RETFound feature workflow on APTOS 2019 and establish a cached-feature softmax linear-head baseline plus post-hoc temperature scaling.
+
+This milestone moves the project from image-based smoke infrastructure to a reusable feature-based experiment path that is appropriate for the planned Bayesian and Laplace last-layer comparisons.
+
+### Feature Export Milestone
+
+Frozen RETFound features were exported successfully to:
+
+```text
+outputs/features/aptos2019_retfound_mae_natureCFP/
+```
+
+Cached feature shapes:
+
+1. `train`: `(2930, 1024)`
+2. `val`: `(366, 1024)`
+3. `test`: `(366, 1024)`
+
+This confirms that the external RETFound adapter, APTOS metadata pipeline, preprocessing path, and split-aware export script now work together on the real dataset.
+
+### Cached-Feature Softmax Linear Head
+
+A 5-epoch cached-feature softmax linear-head run with batch size 8 completed at:
+
+```text
+outputs/feature_heads/retfound_softmax_linear_5epoch_bs8
+```
+
+Final validation results:
+
+1. Accuracy: `0.8798`
+2. AUC: `0.9580`
+3. Sensitivity: `0.8896`
+4. Specificity: `0.8726`
+5. Negative log likelihood: `0.2643`
+6. Brier score: `0.0807`
+7. Expected calibration error: `0.0348`
+8. Confusion matrix: `[[185, 27], [17, 137]]`
+
+### Temperature Scaling
+
+Post-training temperature scaling was fit on the cached-feature validation predictions.
+
+Result:
+
+1. Learned temperature: `0.7649`
+2. ECE improved from `0.0348` to `0.0186`
+3. NLL improved from `0.2643` to `0.2558`
+4. Brier score improved from `0.0807` to `0.0798`
+5. Classification metrics were unchanged, as expected for temperature scaling
+
+### Interpretation
+
+The cached-feature baseline is comparable to the image-based baseline, but it should not be treated as strictly identical. The remaining gap is likely due to optimization differences and the fact that the cached-feature path uses fixed exported features rather than updating image-batch representations during training.
+
+An additional practical observation is that batch size 32 undertrained relative to batch size 8 because it produced fewer optimizer updates over the same epoch budget.
+
+### Consequence For Next Experiments
+
+All future Bayesian-head and Laplace-head comparisons should use:
+
+1. The cached-feature softmax linear baseline
+2. The cached-feature temperature-scaled baseline
+
+as the primary deterministic reference points.
+
 The tests verify:
 
     metrics.json is created

@@ -258,6 +258,70 @@ The first successful cluster setup used:
 - External repo: `/home/karim/external/RETFound_MAE`
 - External repo remote: `https://github.com/rmaphoh/RETFound_MAE.git`
 - External repo commit: `ae9a9ecf37857cf47b8aa9f87cd6f710d75db287`
+
+## Cached RETFound Feature Pipeline
+
+The project now includes a completed frozen-RETFound feature export path for APTOS 2019 together with a cached-feature softmax linear-head training path.
+
+The exported real-data feature cache is stored at:
+
+```text
+outputs/features/aptos2019_retfound_mae_natureCFP/
+```
+
+The cached split shapes are:
+
+1. `train`: `(2930, 1024)`
+2. `val`: `(366, 1024)`
+3. `test`: `(366, 1024)`
+
+This confirms that the local APTOS metadata pipeline, image preprocessing, external RETFound adapter, and feature export CLI now work end to end on the full split structure needed for downstream experiments.
+
+### Cached-Feature Deterministic Baseline
+
+The first completed cached-feature softmax linear-head run is:
+
+```text
+outputs/feature_heads/retfound_softmax_linear_5epoch_bs8
+```
+
+Final validation metrics:
+
+1. Accuracy: `0.8798`
+2. AUC: `0.9580`
+3. Sensitivity: `0.8896`
+4. Specificity: `0.8726`
+5. Negative log likelihood: `0.2643`
+6. Brier score: `0.0807`
+7. Expected calibration error: `0.0348`
+8. Confusion matrix: `[[185, 27], [17, 137]]`
+
+This result is comparable to the earlier image-based baseline, but not identical. That difference is expected: the cached-feature setting changes the optimization path and fixes the encoder outputs in advance, so it should be treated as a closely related but distinct deterministic baseline.
+
+### Temperature-Scaled Cached-Feature Baseline
+
+Temperature scaling on the cached-feature validation predictions produced:
+
+1. Learned temperature: `0.7649`
+2. ECE improvement from `0.0348` to `0.0186`
+3. NLL improvement from `0.2643` to `0.2558`
+4. Brier score improvement from `0.0807` to `0.0798`
+5. No change in classification metrics
+
+This is the expected pattern for post-hoc temperature scaling: ranking-based classification metrics and the confusion matrix stay fixed, while probability calibration improves.
+
+### Optimization Note
+
+Batch size 32 undertrained relative to batch size 8 because it produced fewer optimizer updates at the same epoch count. For the cached-feature linear-head setting, epoch count alone is therefore not a sufficient fairness control when comparing different batch sizes.
+
+### Baseline Policy For Next Comparisons
+
+For all upcoming Bayesian-head and Laplace-head experiments, the primary deterministic comparison points should be:
+
+1. The cached-feature softmax linear baseline
+2. The cached-feature temperature-scaled baseline
+
+This keeps the comparison aligned with the frozen-feature experimental design rather than mixing feature-based uncertainty methods against only image-based end-to-end baselines.
 - Checkpoint: `YukunZhou/RETFound_mae_natureCFP`
 - Local checkpoint: `/home/karim/models/retfound/RETFound_mae_natureCFP/RETFound_mae_natureCFP.pth`
 - Architecture: `RETFound_mae`

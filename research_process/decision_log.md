@@ -258,6 +258,71 @@ Limitations:
 
 - No training loop is implemented yet.
 
+## Decision 006 — Use Cached-Feature Deterministic Baselines As The Primary Reference For Bayesian Heads
+
+**Date:** 2026-06-24
+
+### Decision
+
+Future Bayesian-head and Laplace-head comparisons will use the cached-feature softmax linear-head baseline and the cached-feature temperature-scaled baseline as the primary deterministic reference points.
+
+### Context
+
+The frozen RETFound feature export milestone is now complete for APTOS 2019. Exported cached features are stored at:
+
+```text
+outputs/features/aptos2019_retfound_mae_natureCFP/
+```
+
+with shapes:
+
+1. `train`: `(2930, 1024)`
+2. `val`: `(366, 1024)`
+3. `test`: `(366, 1024)`
+
+The first completed cached-feature softmax linear-head run is:
+
+```text
+outputs/feature_heads/retfound_softmax_linear_5epoch_bs8
+```
+
+with validation results:
+
+1. Accuracy: `0.8798`
+2. AUC: `0.9580`
+3. Sensitivity: `0.8896`
+4. Specificity: `0.8726`
+5. NLL: `0.2643`
+6. Brier: `0.0807`
+7. ECE: `0.0348`
+8. Confusion matrix: `[[185, 27], [17, 137]]`
+
+Temperature scaling then produced:
+
+1. Learned temperature: `0.7649`
+2. ECE improvement from `0.0348` to `0.0186`
+3. NLL improvement from `0.2643` to `0.2558`
+4. Brier improvement from `0.0807` to `0.0798`
+5. No change in classification metrics
+
+### Rationale
+
+The Bayesian-head and Laplace-head methods planned for this project operate on frozen RETFound features. The fairest deterministic baseline is therefore the matching cached-feature softmax head, not only the image-based baseline.
+
+This does not mean the cached-feature and image-based baselines are identical. They are comparable, but not strictly the same experiment. Differences are expected because the cached-feature path fixes the encoder outputs in advance and changes the optimization dynamics.
+
+The batch-size comparison also showed that batch size 32 undertrained relative to batch size 8 because it produced fewer optimizer updates over the same epoch budget. This reinforces the need to compare future methods against a well-tuned cached-feature deterministic baseline rather than a weaker large-batch reference.
+
+### Consequences
+
+- Future deterministic-vs-Bayesian comparisons should report both the raw cached-feature softmax baseline and the temperature-scaled cached-feature baseline.
+- Image-based baselines remain useful context, but they are secondary comparison points for frozen-feature methods.
+- Batch-size comparisons for cached-feature heads should account for optimizer-update count, not only epoch count.
+
+### Status
+
+Accepted.
+
 - No metrics or calibration logic is implemented yet.
 
 - RETFound integration is still pending.
