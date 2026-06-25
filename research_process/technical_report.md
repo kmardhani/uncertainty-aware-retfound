@@ -74,3 +74,62 @@ The main methodological implication is that uncertainty-aware selective referral
 
 The SNGP-style variance proxy should still be evaluated on DDR, because its intended value is distance-aware behavior under dataset shift. The central question for the next stage is whether `sngp_variance` becomes more useful under APTOS-to-DDR transfer.
 
+
+## DDR Evaluation Of APTOS-Trained SNGP-Style Head
+
+The APTOS-trained SNGP-style cached-feature head was evaluated on DDR cached RETFound features as a second-dataset validation test. The model checkpoint selected by APTOS validation sensitivity was evaluated directly on DDR without retraining or refitting the SNGP diagonal precision state.
+
+### Default-Threshold Result
+
+At threshold `0.50`, DDR performance was poor:
+
+1. Accuracy: `0.5990`
+2. Sensitivity: `0.2701`
+3. Specificity: `0.8675`
+4. Balanced accuracy: `0.5688`
+5. AUC: `0.5833`
+6. ECE: `0.2168`
+7. NLL: `0.9340`
+8. Brier score: `0.2977`
+9. Confusion matrix: `[[897, 137], [616, 228]]`
+
+The main failure was a high false-negative count:
+
+    false negatives = 616
+
+This indicates poor transfer from APTOS to DDR for the SNGP sensitivity-selected checkpoint.
+
+### Threshold Tuning
+
+Threshold tuning did not solve the cross-dataset failure.
+
+The best balanced-accuracy threshold was `0.45`, with:
+
+1. Sensitivity: `0.3069`
+2. Specificity: `0.8424`
+3. Balanced accuracy: `0.5746`
+4. False negatives: `585`
+5. False positives: `163`
+
+A very low threshold of `0.01` reduced false negatives to `10`, but produced `1018` false positives and specificity of only `0.0155`. This is not a practical operating point.
+
+### Selective Referral
+
+Selective referral at approximately `80%` coverage also failed to recover a useful screening behavior on DDR.
+
+At approximately `80%` coverage:
+
+1. `predictive_entropy`: false negatives `519`, false positives `59`, sensitivity `0.2160`
+2. `sngp_variance`: false negatives `478`, false positives `133`, sensitivity `0.3042`
+3. `sngp_uncertainty`: false negatives `521`, false positives `60`, sensitivity `0.2165`
+
+Referral mainly removed false positives rather than false negatives, which is not the desired safety behavior for referable-DR screening.
+
+### Interpretation
+
+The SNGP-style cached-feature head should be treated as a useful internal-validation baseline but not as a successful cross-dataset robustness method in its current form.
+
+The APTOS result showed that SNGP-style training could produce a high-sensitivity source-dataset operating point. However, DDR validation showed weak discrimination, poor calibration, and poor false-negative control.
+
+This negative result is scientifically useful because it shows that distance-aware uncertainty approximations do not automatically solve dataset shift in frozen RETFound feature space. The stronger project-level conclusion is that uncertainty-aware methods must be evaluated under external dataset shift, and that threshold tuning or selective referral can fail when the underlying cross-dataset ranking is weak.
+

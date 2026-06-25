@@ -1718,3 +1718,150 @@ However, the best selective-referral signal on APTOS was `predictive_entropy`, n
 
 The key remaining test is DDR second-dataset validation. That is where the distance-aware variance proxy may be more useful if it captures dataset shift.
 
+
+## Experiment: DDR Evaluation Of APTOS-Trained SNGP-Style Cached-Feature Head
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Evaluate whether the APTOS-trained SNGP-style cached-feature head transfers to DDR as a second-dataset validation test.
+
+This experiment uses the SNGP sensitivity-selected checkpoint trained on APTOS and evaluates it directly on cached DDR RETFound features. The model is not retrained on DDR, and the fitted SNGP diagonal precision state is restored from the APTOS checkpoint rather than recomputed on DDR.
+
+### Run Configuration
+
+APTOS-trained model:
+
+    outputs/feature_heads/aptos2019_retfound_sngp_sensitivity/best_model.pt
+
+Model config:
+
+    outputs/feature_heads/aptos2019_retfound_sngp_sensitivity/config.json
+
+DDR cached features:
+
+    outputs/features/ddr_retfound_mae_natureCFP/val_features.pt
+
+DDR evaluation output:
+
+    outputs/feature_heads/ddr_from_aptos_sngp_sensitivity
+
+Evaluation command:
+
+    uv run python -m scripts.evaluation.evaluate_sngp_feature_head \
+      --features outputs/features/ddr_retfound_mae_natureCFP/val_features.pt \
+      --model-path outputs/feature_heads/aptos2019_retfound_sngp_sensitivity/best_model.pt \
+      --config-json outputs/feature_heads/aptos2019_retfound_sngp_sensitivity/config.json \
+      --output-dir outputs/feature_heads/ddr_from_aptos_sngp_sensitivity \
+      --batch-size 128 \
+      --device cuda
+
+### Default-Threshold DDR Result
+
+At the default threshold of `0.50`, the APTOS-trained SNGP sensitivity-selected model performed poorly on DDR:
+
+1. Number of examples: `1878`
+2. Accuracy: `0.5990`
+3. Sensitivity: `0.2701`
+4. Specificity: `0.8675`
+5. Balanced accuracy: `0.5688`
+6. AUC: `0.5833`
+7. ECE: `0.2168`
+8. NLL: `0.9340`
+9. Brier score: `0.2977`
+10. Confusion matrix: `[[897, 137], [616, 228]]`
+
+The main failure mode was severe under-detection of referable DR cases:
+
+    false negatives = 616
+    false positives = 137
+
+### DDR Threshold Sweep
+
+Threshold tuning did not meaningfully rescue cross-dataset performance.
+
+The best balanced-accuracy threshold was:
+
+1. Threshold: `0.45`
+2. Accuracy: `0.6017`
+3. Sensitivity: `0.3069`
+4. Specificity: `0.8424`
+5. Balanced accuracy: `0.5746`
+6. False negatives: `585`
+7. False positives: `163`
+
+The lowest false-negative threshold was:
+
+1. Threshold: `0.01`
+2. Accuracy: `0.4526`
+3. Sensitivity: `0.9882`
+4. Specificity: `0.0155`
+5. Balanced accuracy: `0.5018`
+6. False negatives: `10`
+7. False positives: `1018`
+
+This shows that sensitivity can only be recovered at an extreme false-positive burden.
+
+### DDR Selective Referral
+
+Selective referral was evaluated using:
+
+1. `predictive_entropy`
+2. `sngp_variance`
+3. `sngp_uncertainty`
+
+At approximately `80%` coverage, the results were:
+
+Using `predictive_entropy`:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.6154`
+4. Sensitivity: `0.2160`
+5. Specificity: `0.9298`
+6. Balanced accuracy: `0.5729`
+7. False negatives: `519`
+8. False positives: `59`
+
+Using `sngp_variance`:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.5935`
+4. Sensitivity: `0.3042`
+5. Specificity: `0.8370`
+6. Balanced accuracy: `0.5706`
+7. False negatives: `478`
+8. False positives: `133`
+
+Using raw combined `sngp_uncertainty`:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.6134`
+4. Sensitivity: `0.2165`
+5. Specificity: `0.9284`
+6. Balanced accuracy: `0.5725`
+7. False negatives: `521`
+8. False positives: `60`
+
+Selective referral reduced false positives more than false negatives. This is not the desired safety behavior for referable-DR screening, where missed positives are the primary concern.
+
+### Interpretation
+
+The SNGP-style cached-feature head produced a strong high-sensitivity operating point on APTOS internal validation, but it did not transfer well to DDR.
+
+On DDR, the model showed:
+
+1. Weak discrimination
+2. Poor calibration
+3. Very low sensitivity at the default threshold
+4. Poor balanced accuracy after threshold tuning
+5. No useful selective-referral reduction of false negatives
+
+This is an important negative result. It suggests that the current SNGP-style diagonal variance proxy does not provide the expected distance-aware safety benefit under APTOS-to-DDR dataset shift.
+
+The result strengthens the broader methodological conclusion that internal validation gains are not sufficient. Uncertainty-aware heads must be validated under dataset shift, and strong source-dataset performance does not guarantee cross-dataset screening reliability.
+
