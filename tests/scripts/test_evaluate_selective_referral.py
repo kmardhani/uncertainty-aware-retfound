@@ -73,16 +73,26 @@ def test_evaluate_selective_referral_higher_is_more_uncertain(tmp_path: Path) ->
     partial_result = results[1]
 
     assert full_result["coverage"] == pytest.approx(1.0)
+    assert full_result["target_coverage"] == pytest.approx(1.0)
+    assert full_result["total_count"] == 5
     assert full_result["accepted_count"] == 5
     assert full_result["deferred_count"] == 0
+    assert full_result["referral_rate"] == pytest.approx(0.0)
+    assert full_result["coverage"] == pytest.approx(full_result["accepted_count"] / 5)
     assert full_result["false_negatives"] == 1
     assert full_result["false_positives"] == 1
+    assert full_result["accepted_positive_prediction_rate"] == pytest.approx(0.6)
 
     assert partial_result["coverage"] == pytest.approx(0.8)
+    assert partial_result["target_coverage"] == pytest.approx(0.8)
+    assert partial_result["total_count"] == 5
     assert partial_result["accepted_count"] == 4
     assert partial_result["deferred_count"] == 1
+    assert partial_result["referral_rate"] == pytest.approx(0.2)
+    assert partial_result["coverage"] == pytest.approx(partial_result["accepted_count"] / 5)
     assert partial_result["false_negatives"] == 0
     assert partial_result["false_positives"] == 1
+    assert partial_result["accepted_positive_prediction_rate"] == pytest.approx(0.75)
 
 
 def test_evaluate_selective_referral_lower_is_more_uncertain(tmp_path: Path) -> None:
@@ -98,8 +108,12 @@ def test_evaluate_selective_referral_lower_is_more_uncertain(tmp_path: Path) -> 
 
     result = results[0]
     assert result["coverage"] == pytest.approx(0.6)
+    assert result["target_coverage"] == pytest.approx(0.6)
+    assert result["total_count"] == 5
     assert result["accepted_count"] == 3
     assert result["deferred_count"] == 2
+    assert result["referral_rate"] == pytest.approx(0.4)
+    assert result["coverage"] == pytest.approx(result["accepted_count"] / 5)
     assert result["false_negatives"] == 0
 
 

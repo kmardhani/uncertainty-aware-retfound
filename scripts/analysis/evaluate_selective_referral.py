@@ -102,11 +102,13 @@ def _compute_selective_metrics(
     true_negative = int(((predictions == 0) & (labels == 0)).sum().item())
     false_positive = int(((predictions == 1) & (labels == 0)).sum().item())
     false_negative = int(((predictions == 0) & (labels == 1)).sum().item())
-    referral_rate = float((predictions == 1).float().mean().item())
+    referral_rate = float(deferred_count / total_examples)
+    accepted_positive_prediction_rate = float((predictions == 1).float().mean().item())
 
     return {
         "coverage": float(accepted_count / total_examples),
         "target_coverage": float(coverage_level),
+        "total_count": total_examples,
         "deferred_count": deferred_count,
         "accepted_count": accepted_count,
         "accuracy": accuracy_score(predictions, labels),
@@ -120,6 +122,7 @@ def _compute_selective_metrics(
         "false_positives": false_positive,
         "false_negatives": false_negative,
         "referral_rate": referral_rate,
+        "accepted_positive_prediction_rate": accepted_positive_prediction_rate,
     }
 
 
