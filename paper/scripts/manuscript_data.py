@@ -27,6 +27,10 @@ REPOSITORY_URL: Final[str] = "https://github.com/kmardhani/uncertainty-aware-ret
 COMMIT_HASH: Final[str] = "b7e579b183eda54e99d5d3944574fac7dca9d322"
 ARXIV_PRIMARY: Final[str] = "cs.CV"
 ARXIV_SECONDARY: Final[str] = "cs.LG"
+PROJECT_STATUS: Final[str] = (
+    "Independent research initiative; not sponsored, supervised, or formally "
+    "endorsed by the university"
+)
 
 
 DATASET_SUMMARY: Final[list[dict[str, object]]] = [
@@ -660,4 +664,3 @@ DECISION_POLICY_ROWS: Final[list[dict[str, object]]] = [
         "positive_prediction_rate": 160 / 366,
     },
 ]
-

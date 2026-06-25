@@ -55,3 +55,5 @@ uv run python paper/scripts/make_paper_assets.py
 ## Caveat
 
 The manuscript is intentionally conservative. It should not be described as a state-of-the-art claim or a clinically validated deployment study. The strongest claim in the paper is about safety/coverage evaluation under dataset shift, not universal superiority of Bayesian or SNGP-style methods.
+
+This work is also an independent research initiative by the author. Although the author is enrolled in the Master of Science in Artificial Intelligence program at the University of Colorado Boulder, the project is not sponsored, supervised, or formally endorsed by the university.

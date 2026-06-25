@@ -1,14 +1,14 @@
 \begin{table}[t]
 \centering
-\small
+\footnotesize
 \caption{Frozen RETFound feature extraction settings used for cached-feature experiments.}
 \label{tab:feature-summary}
-\begin{tabular}{lrrrrrrr}
+\begin{tabularx}{\textwidth}{l l X r r r l r}
 \toprule
 Dataset & Backbone & Checkpoint & Dim & Resize & Crop & Device & Batch \\
 \midrule
 APTOS 2019 & RETFound\_mae & RETFound\_mae\_natureCFP.pth & 1024 & 224 & 224 & cuda & 8 \\
 DDR & RETFound\_mae & RETFound\_mae\_natureCFP.pth & 1024 & 224 & 224 & cuda & 16 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}

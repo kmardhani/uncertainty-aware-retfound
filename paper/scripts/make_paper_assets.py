@@ -33,6 +33,7 @@ from manuscript_data import (  # noqa: E402
     EMAIL,
     FEATURE_EXTRACTION_SUMMARY,
     MODEL_COMPARISON_ROWS,
+    PROJECT_STATUS,
     REPOSITORY_URL,
     SELECTIVE_REFERRAL_ROWS,
     THRESHOLD_SWEEP_ROWS,
@@ -127,26 +128,43 @@ def _write_table(
     caption: str,
     label: str,
     decimals: dict[str, int] | None = None,
+    font_size: str = r"\small",
+    column_spec: str | None = None,
+    tabular_environment: str = "tabular",
+    table_width: str = r"\textwidth",
+    preformatted_columns: set[str] | None = None,
 ) -> None:
     decimals = decimals or {}
-    align = "l" + "r" * (len(columns) - 1)
+    preformatted_columns = preformatted_columns or set()
+    align = column_spec or ("l" + "r" * (len(columns) - 1))
     lines = [
         r"\begin{table}[t]",
         r"\centering",
-        r"\small",
+        font_size,
         rf"\caption{{{caption}}}",
         rf"\label{{{label}}}",
-        rf"\begin{{tabular}}{{{align}}}",
+    ]
+    if tabular_environment == "tabularx":
+        lines.append(rf"\begin{{tabularx}}{{{table_width}}}{{{align}}}")
+    else:
+        lines.append(rf"\begin{{{tabular_environment}}}{{{align}}}")
+    lines.extend(
+        [
         r"\toprule",
         " & ".join(headers) + r" \\",
         r"\midrule",
-    ]
+        ]
+    )
     for record in dataframe[columns].to_dict(orient="records"):
         row = []
         for column in columns:
-            row.append(_format_value(record[column], decimals.get(column, 4)))
+            if column in preformatted_columns:
+                row.append(str(record[column]))
+            else:
+                row.append(_format_value(record[column], decimals.get(column, 4)))
         lines.append(" & ".join(row) + r" \\")
-    lines.extend([r"\bottomrule", r"\end{tabular}", r"\end{table}", ""])
+    end_environment = "tabularx" if tabular_environment == "tabularx" else tabular_environment
+    lines.extend([r"\bottomrule", rf"\end{{{end_environment}}}", r"\end{table}", ""])
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -180,6 +198,9 @@ def _feature_summary_table(paths: dict[str, Path]) -> None:
         headers=["Dataset", "Backbone", "Checkpoint", "Dim", "Resize", "Crop", "Device", "Batch"],
         caption="Frozen RETFound feature extraction settings used for cached-feature experiments.",
         label="tab:feature-summary",
+        font_size=r"\footnotesize",
+        column_spec=r"l l X r r r l r",
+        tabular_environment="tabularx",
         decimals={"feature_dim": 0, "resize": 0, "center_crop": 0, "batch_size": 0},
     )
 
@@ -353,6 +374,9 @@ def _ddr_selective_table(paths: dict[str, Path], selective_df: pd.DataFrame) -> 
         headers=["Signal", "Coverage", "Referral", "Sens", "Spec", "Bal Acc", "FN", "FP"],
         caption="DDR selective-referral comparison at approximately 80\\% accepted coverage.",
         label="tab:ddr-selective",
+        font_size=r"\footnotesize",
+        column_spec=r"X r r r r r r r",
+        tabular_environment="tabularx",
         decimals={
             "coverage": 4,
             "referral_rate": 4,
@@ -416,6 +440,7 @@ def _reproducibility_table(paths: dict[str, Path]) -> None:
             {"item": "Title", "value": TITLE},
             {"item": "arXiv primary", "value": ARXIV_PRIMARY},
             {"item": "arXiv secondary", "value": ARXIV_SECONDARY},
+            {"item": "Project status", "value": PROJECT_STATUS},
             {"item": "Task", "value": "Binary referable diabetic retinopathy"},
             {"item": "Backbone", "value": "Frozen RETFound_mae"},
             {"item": "Feature dimension", "value": "1024"},
@@ -423,14 +448,29 @@ def _reproducibility_table(paths: dict[str, Path]) -> None:
             {"item": "DDR split", "value": "8765 / 1878 / 1879"},
         ]
     )
+    dataframe["rendered_value"] = dataframe.apply(_format_reproducibility_value, axis=1)
     _write_table(
         path=paths["tables_dir"] / "reproducibility_summary.tex",
         dataframe=dataframe,
-        columns=["item", "value"],
+        columns=["item", "rendered_value"],
         headers=["Item", "Value"],
         caption="Reproducibility metadata for the manuscript package.",
         label="tab:reproducibility",
+        font_size=r"\footnotesize",
+        column_spec=r"p{0.23\textwidth}X",
+        tabular_environment="tabularx",
+        preformatted_columns={"rendered_value"},
     )
+
+
+def _format_reproducibility_value(row: pd.Series) -> str:
+    item = str(row["item"])
+    value = str(row["value"])
+    if item == "Repository":
+        return rf"\url{{{value}}}"
+    if item in {"Commit hash", "Email"}:
+        return rf"\nolinkurl{{{value}}}"
+    return _escape_latex(value)
 
 
 def _write_all_tables(paths: dict[str, Path], tables: dict[str, pd.DataFrame]) -> None:
