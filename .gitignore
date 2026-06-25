@@ -20,3 +20,24 @@ wheels/
 # Private working notes and internal research logs
 research_process/
 docs/
+
+# Test/cache artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
+paper/main.pdf
+
+# Python caches
+*.pyo
+*.pyd
