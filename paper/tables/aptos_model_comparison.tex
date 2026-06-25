@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\small
+\caption{APTOS validation comparison for full-coverage cached-feature heads.}
+\label{tab:aptos-models}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Model & Acc & AUC & Sens & Spec & Bal Acc & ECE & FN & FP \\
+\midrule
+Softmax & 0.8798 & 0.9580 & 0.8896 & 0.8726 & 0.8811 & 0.0348 & 17 & 27 \\
+Softmax+Temp & 0.8798 & 0.9580 & 0.8896 & 0.8726 & 0.8811 & 0.0186 & 17 & 27 \\
+Bayes (val-loss) & 0.8934 & 0.9650 & 0.8831 & 0.9009 & 0.8920 & 0.0216 & 18 & 21 \\
+Bayes (max-sens) & 0.8934 & 0.9613 & 0.9610 & 0.8443 & 0.9027 & 0.0320 & 6 & 33 \\
+Bayes (balanced) & 0.9016 & 0.9617 & 0.9545 & 0.8632 & 0.9089 & 0.0275 & 7 & 29 \\
+Laplace (val-loss) & 0.8962 & 0.9666 & 0.8636 & 0.9198 & 0.8917 & 0.0972 & 21 & 17 \\
+Laplace (sens) & 0.8962 & 0.9586 & 0.9481 & 0.8585 & 0.9033 & 0.0900 & 8 & 30 \\
+SNGP (val-loss) & 0.9071 & 0.9756 & 0.8831 & 0.9245 & 0.9038 & 0.0288 & 18 & 16 \\
+SNGP (sens) & 0.9098 & 0.9711 & 0.9805 & 0.8585 & 0.9195 & 0.0287 & 3 & 30 \\
+\bottomrule
+\end{tabular}
+\end{table}

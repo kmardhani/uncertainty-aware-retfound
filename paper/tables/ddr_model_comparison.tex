@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\small
+\caption{DDR validation comparison for full-coverage native DDR heads and APTOS-to-DDR SNGP transfer.}
+\label{tab:ddr-models}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Model & Acc & AUC & Sens & Spec & Bal Acc & ECE & FN & FP \\
+\midrule
+DDR Softmax & 0.7939 & 0.8688 & 0.7773 & 0.8075 & 0.7924 & 0.0223 & 188 & 199 \\
+DDR Bayes (val-loss) & 0.7966 & 0.8782 & 0.7275 & 0.8530 & 0.7902 & 0.0174 & 230 & 152 \\
+DDR Bayes (sens) & 0.7678 & 0.8634 & 0.8472 & 0.7031 & 0.7751 & 0.0097 & 129 & 307 \\
+APTOS->DDR SNGP & 0.5990 & 0.5833 & 0.2701 & 0.8675 & 0.5688 & 0.2168 & 616 & 137 \\
+\bottomrule
+\end{tabular}
+\end{table}

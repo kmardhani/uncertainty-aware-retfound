@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\small
+\caption{DDR threshold-sweep summary for balanced and low-false-negative operating points.}
+\label{tab:ddr-thresholds}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Sweep & Policy & Thr & Sens & Spec & Bal Acc & FN & FP \\
+\midrule
+Softmax+Temp & Best bal acc & 0.50 & 0.7773 & 0.8075 & 0.7924 & 188 & 199 \\
+Softmax+Temp & Lowest FN & 0.03 & 1 & 0.1025 & 0.5512 & 0 & 928 \\
+Bayes (val-loss) & Best bal acc & 0.40 & 0.8104 & 0.7785 & 0.7945 & 160 & 229 \\
+Bayes (sens) & Best bal acc & 0.55 & 0.8152 & 0.7524 & 0.7838 & 156 & 256 \\
+Bayes (sens) & Lowest FN & 0.03 & 1 & 0.0532 & 0.5266 & 0 & 979 \\
+APTOS->DDR SNGP & Best bal acc & 0.45 & 0.3069 & 0.8424 & 0.5746 & 585 & 163 \\
+APTOS->DDR SNGP & Lowest FN & 0.01 & 0.9882 & 0.0155 & 0.5018 & 10 & 1018 \\
+\bottomrule
+\end{tabular}
+\end{table}
