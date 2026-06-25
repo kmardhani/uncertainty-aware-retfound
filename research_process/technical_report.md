@@ -133,3 +133,82 @@ The APTOS result showed that SNGP-style training could produce a high-sensitivit
 
 This negative result is scientifically useful because it shows that distance-aware uncertainty approximations do not automatically solve dataset shift in frozen RETFound feature space. The stronger project-level conclusion is that uncertainty-aware methods must be evaluated under external dataset shift, and that threshold tuning or selective referral can fail when the underlying cross-dataset ranking is weak.
 
+
+## Consolidated DDR Results
+
+A consolidated DDR comparison was constructed across native DDR softmax, native DDR variational Bayesian heads, threshold sweeps, selective referral, and the APTOS-trained SNGP-style head evaluated on DDR.
+
+### Full-Coverage DDR Models
+
+The native DDR softmax model achieved balanced full-coverage performance:
+
+1. Sensitivity: `0.7773`
+2. Specificity: `0.8075`
+3. Balanced accuracy: `0.7924`
+4. AUC: `0.8688`
+5. False negatives: `188`
+6. False positives: `199`
+
+The native DDR Bayesian model selected by validation loss achieved similar balanced accuracy with higher specificity but lower sensitivity:
+
+1. Sensitivity: `0.7275`
+2. Specificity: `0.8530`
+3. Balanced accuracy: `0.7902`
+4. AUC: `0.8782`
+5. False negatives: `230`
+6. False positives: `152`
+
+The native DDR Bayesian model selected by sensitivity produced the strongest safety-oriented full-coverage operating point:
+
+1. Sensitivity: `0.8472`
+2. Specificity: `0.7031`
+3. Balanced accuracy: `0.7751`
+4. AUC: `0.8634`
+5. False negatives: `129`
+6. False positives: `307`
+
+In contrast, the APTOS-trained SNGP-style model transferred poorly to DDR:
+
+1. Sensitivity: `0.2701`
+2. Specificity: `0.8675`
+3. Balanced accuracy: `0.5688`
+4. AUC: `0.5833`
+5. False negatives: `616`
+6. False positives: `137`
+
+### Threshold Tuning
+
+Threshold tuning showed that false negatives can be reduced by lowering the positive-class threshold, but this often creates a large false-positive burden. For example, the DDR Bayesian sensitivity-selected model reached zero false negatives at threshold `0.03`, but produced `979` false positives. The same pattern appeared for softmax and Bayesian val-loss-selected models.
+
+This demonstrates that false-negative reduction is not unique to Bayesian modeling. The clinically meaningful question is the full tradeoff among sensitivity, specificity, false positives, false negatives, and referral burden.
+
+### Selective Referral
+
+At approximately `80%` accepted coverage, selective referral improved the DDR Bayesian sensitivity-selected model.
+
+Using confidence or predictive entropy as the uncertainty signal, the Bayesian model achieved:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Sensitivity: `0.8966`
+4. Specificity: `0.7596`
+5. Balanced accuracy: `0.8281`
+6. False negatives: `72`
+7. False positives: `194`
+
+This reduced accepted-case false negatives from `129` at full coverage to `72` at approximately `80%` coverage.
+
+The SNGP-style model did not show useful selective-referral behavior under DDR shift. At approximately `80%` coverage, SNGP uncertainty signals still left hundreds of accepted-case false negatives, with sensitivity between approximately `0.216` and `0.304`.
+
+### Interpretation
+
+The consolidated DDR results support three conclusions.
+
+First, Bayesian sensitivity selection provides the strongest full-coverage safety-oriented DDR operating point among the native DDR models tested.
+
+Second, selective referral can improve accepted-case reliability when the model has a useful uncertainty-ranking signal. For the DDR Bayesian sensitivity-selected model, referral at approximately `20%` reduced accepted-case false negatives substantially while improving balanced accuracy.
+
+Third, the SNGP-style cached-feature head did not improve cross-dataset robustness in this implementation. Its strong APTOS internal validation result did not transfer to DDR, and its uncertainty measures did not reliably identify dangerous missed-positive cases.
+
+These findings reinforce the project's central methodological point: uncertainty-aware methods must be evaluated under external dataset shift, and internal validation performance alone is not sufficient evidence of clinical screening robustness.
+

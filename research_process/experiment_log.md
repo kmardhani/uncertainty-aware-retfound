@@ -1865,3 +1865,210 @@ This is an important negative result. It suggests that the current SNGP-style di
 
 The result strengthens the broader methodological conclusion that internal validation gains are not sufficient. Uncertainty-aware heads must be validated under dataset shift, and strong source-dataset performance does not guarantee cross-dataset screening reliability.
 
+
+## Consolidated DDR Comparison Across Softmax, Bayesian, Threshold, Referral, And SNGP
+
+**Date:** 2026-06-24  
+**Status:** Completed
+
+### Objective
+
+Summarize DDR validation results across the main model families and safety mechanisms:
+
+1. Native DDR softmax feature head
+2. Native DDR variational Bayesian feature heads
+3. Threshold sweeps
+4. Selective referral
+5. APTOS-trained SNGP-style feature head evaluated on DDR
+
+This comparison uses the regenerated consolidated summary tables:
+
+    outputs/summary_tables/model_comparison.csv
+    outputs/summary_tables/threshold_sweep_summary.csv
+    outputs/summary_tables/selective_referral_summary.csv
+    outputs/summary_tables/summary_tables.json
+
+The summary builder was updated to include SNGP and DDR rows, add a threshold-sweep summary table, and correct the meaning of `referral_rate`. For full-coverage model rows, `referral_rate` is now `0.0`, while `positive_prediction_rate` is reported separately. For selective-referral rows, `referral_rate` is recomputed as deferred cases divided by total cases.
+
+### DDR Full-Coverage Model Comparison
+
+At full coverage, the native DDR softmax and Bayesian models substantially outperformed the APTOS-trained SNGP-style model on DDR.
+
+Native DDR softmax:
+
+1. Accuracy: `0.7939`
+2. AUC: `0.8688`
+3. Sensitivity: `0.7773`
+4. Specificity: `0.8075`
+5. Balanced accuracy: `0.7924`
+6. ECE: `0.0223`
+7. False positives: `199`
+8. False negatives: `188`
+
+Native DDR Bayesian model selected by validation loss:
+
+1. Accuracy: `0.7966`
+2. AUC: `0.8782`
+3. Sensitivity: `0.7275`
+4. Specificity: `0.8530`
+5. Balanced accuracy: `0.7902`
+6. ECE: `0.0174`
+7. False positives: `152`
+8. False negatives: `230`
+
+Native DDR Bayesian model selected by sensitivity:
+
+1. Accuracy: `0.7678`
+2. AUC: `0.8634`
+3. Sensitivity: `0.8472`
+4. Specificity: `0.7031`
+5. Balanced accuracy: `0.7751`
+6. ECE: `0.0097`
+7. False positives: `307`
+8. False negatives: `129`
+
+APTOS-trained SNGP-style sensitivity-selected model evaluated on DDR:
+
+1. Accuracy: `0.5990`
+2. AUC: `0.5833`
+3. Sensitivity: `0.2701`
+4. Specificity: `0.8675`
+5. Balanced accuracy: `0.5688`
+6. ECE: `0.2168`
+7. False positives: `137`
+8. False negatives: `616`
+
+### DDR Threshold-Sweep Comparison
+
+Threshold sweeps showed that threshold adjustment can reduce false negatives, but often at a large false-positive cost.
+
+For the DDR Bayesian sensitivity-selected model, the best balanced-accuracy threshold was:
+
+1. Threshold: `0.55`
+2. Accuracy: `0.7806`
+3. Sensitivity: `0.8152`
+4. Specificity: `0.7524`
+5. Balanced accuracy: `0.7838`
+6. False negatives: `156`
+7. False positives: `256`
+
+For the DDR Bayesian val-loss-selected model, the best balanced-accuracy threshold was:
+
+1. Threshold: `0.40`
+2. Accuracy: `0.7929`
+3. Sensitivity: `0.8104`
+4. Specificity: `0.7785`
+5. Balanced accuracy: `0.7945`
+6. False negatives: `160`
+7. False positives: `229`
+
+For DDR softmax with temperature scaling, the best balanced-accuracy threshold remained `0.50`:
+
+1. Accuracy: `0.7939`
+2. Sensitivity: `0.7773`
+3. Specificity: `0.8075`
+4. Balanced accuracy: `0.7924`
+5. False negatives: `188`
+6. False positives: `199`
+
+For the APTOS-trained SNGP-style model evaluated on DDR, the best balanced-accuracy threshold was weak:
+
+1. Threshold: `0.45`
+2. Accuracy: `0.6017`
+3. Sensitivity: `0.3069`
+4. Specificity: `0.8424`
+5. Balanced accuracy: `0.5746`
+6. False negatives: `585`
+7. False positives: `163`
+
+The lowest false-negative thresholds for softmax and Bayesian models could reach zero false negatives, but only with very high false-positive counts. For example, the DDR Bayesian sensitivity-selected model at threshold `0.03` reached zero false negatives but produced `979` false positives.
+
+### DDR Selective Referral At Approximately 80% Coverage
+
+At approximately `80%` accepted coverage, selective referral improved the safety profile of the DDR Bayesian sensitivity-selected model.
+
+DDR Bayesian sensitivity-selected model using confidence:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.8230`
+4. Sensitivity: `0.8966`
+5. Specificity: `0.7596`
+6. Balanced accuracy: `0.8281`
+7. False negatives: `72`
+8. False positives: `194`
+
+DDR Bayesian sensitivity-selected model using predictive entropy produced the same result:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.8230`
+4. Sensitivity: `0.8966`
+5. Specificity: `0.7596`
+6. Balanced accuracy: `0.8281`
+7. False negatives: `72`
+8. False positives: `194`
+
+DDR Bayesian sensitivity-selected model using probability variance:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.8011`
+4. Sensitivity: `0.8887`
+5. Specificity: `0.7298`
+6. Balanced accuracy: `0.8093`
+7. False negatives: `75`
+8. False positives: `224`
+
+DDR Bayesian sensitivity-selected model using mutual information:
+
+1. Coverage: `0.8003`
+2. Referral rate: `0.1997`
+3. Accuracy: `0.7964`
+4. Sensitivity: `0.8783`
+5. Specificity: `0.7284`
+6. Balanced accuracy: `0.8033`
+7. False negatives: `83`
+8. False positives: `223`
+
+By contrast, the APTOS-trained SNGP-style model did not benefit meaningfully from selective referral on DDR. At approximately `80%` coverage:
+
+Using SNGP predictive entropy:
+
+1. Accuracy: `0.6154`
+2. Sensitivity: `0.2160`
+3. Specificity: `0.9298`
+4. Balanced accuracy: `0.5729`
+5. False negatives: `519`
+6. False positives: `59`
+
+Using SNGP variance:
+
+1. Accuracy: `0.5935`
+2. Sensitivity: `0.3042`
+3. Specificity: `0.8370`
+4. Balanced accuracy: `0.5706`
+5. False negatives: `478`
+6. False positives: `133`
+
+Using raw combined SNGP uncertainty:
+
+1. Accuracy: `0.6134`
+2. Sensitivity: `0.2165`
+3. Specificity: `0.9284`
+4. Balanced accuracy: `0.5725`
+5. False negatives: `521`
+6. False positives: `60`
+
+### Interpretation
+
+The consolidated DDR results show that the strongest safety-oriented DDR behavior comes from the native DDR Bayesian sensitivity-selected model, especially when combined with selective referral.
+
+The Bayesian sensitivity-selected model reduced full-coverage false negatives to `129`, compared with `188` for the native DDR softmax model. With selective referral at approximately `80%` coverage, the Bayesian model further reduced accepted-case false negatives to `72`.
+
+However, threshold-only approaches can also reduce false negatives, including to zero, but only at extreme false-positive burden. This supports the conclusion that false-negative reduction is not unique to Bayesian modeling, and that clinically useful screening behavior must be judged by the full sensitivity-specificity-referral tradeoff.
+
+The SNGP-style cached-feature head produced strong internal APTOS validation behavior but failed under APTOS-to-DDR transfer. Its DDR AUC, sensitivity, balanced accuracy, and selective-referral behavior were substantially worse than the native DDR softmax and Bayesian heads. The diagonal SNGP-style variance proxy therefore did not provide evidence of improved dataset-shift robustness in this implementation.
+
+Overall, the DDR comparison supports the project-level conclusion that uncertainty-aware methods must be evaluated under external dataset shift. Internal validation gains alone are insufficient, and uncertainty estimates can fail to identify dangerous false negatives when the underlying cross-dataset ranking is weak.
+
