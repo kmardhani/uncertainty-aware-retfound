@@ -320,6 +320,27 @@ def _iter_existing_paths(paths: Sequence[Path]) -> list[Path]:
     return existing_paths
 
 
+def _compute_selective_referral_rate(row: pd.Series) -> float | None:
+    """Compute deferred-case referral rate for selective-referral summaries."""
+
+    total_count_value = row.get("total_count")
+    if pd.notna(total_count_value):
+        total_count = float(total_count_value)
+        if total_count > 0:
+            return float(row["deferred_count"]) / total_count
+        return None
+
+    accepted_count_value = row.get("accepted_count")
+    deferred_count_value = row.get("deferred_count")
+    if pd.isna(accepted_count_value) or pd.isna(deferred_count_value):
+        return None
+
+    denominator = float(accepted_count_value) + float(deferred_count_value)
+    if denominator <= 0:
+        return None
+    return float(deferred_count_value) / denominator
+
+
 def build_selective_referral_table(base_output_dir: str | Path) -> pd.DataFrame:
     """Build a consolidated selective-referral summary table."""
 
@@ -374,7 +395,7 @@ def build_selective_referral_table(base_output_dir: str | Path) -> pd.DataFrame:
                     "balanced_accuracy": float(selected_row["balanced_accuracy"]),
                     "false_positives": int(selected_row["false_positives"]),
                     "false_negatives": int(selected_row["false_negatives"]),
-                    "referral_rate": float(selected_row["referral_rate"]),
+                    "referral_rate": _compute_selective_referral_rate(selected_row),
                 }
             )
 

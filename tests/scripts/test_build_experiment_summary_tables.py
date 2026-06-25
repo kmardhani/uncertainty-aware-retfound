@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from scripts.analysis.build_experiment_summary_tables import (
+    build_selective_referral_table,
     build_model_comparison_table,
     main,
     run_build_experiment_summary_tables,
@@ -140,7 +141,7 @@ def _write_synthetic_outputs(base_output_dir: Path) -> None:
                 "balanced_accuracy": 0.80,
                 "false_positives": 2,
                 "false_negatives": 1,
-                "referral_rate": 0.0,
+                "referral_rate": 0.5,
             },
             {
                 "coverage": 0.91,
@@ -359,6 +360,65 @@ def test_build_model_comparison_table_supports_nested_metrics_and_skips_missing(
     assert dataframe.iloc[0]["positive_prediction_rate"] == pytest.approx((17 + 6) / 40)
     warning_messages = [str(warning.message) for warning in recwarn]
     assert any("Skipping missing model metrics file" in message for message in warning_messages)
+
+
+def test_build_selective_referral_table_recomputes_referral_rate_from_counts(
+    tmp_path: Path,
+) -> None:
+    base_output_dir = tmp_path / "outputs"
+    selective_referral_dir = base_output_dir / "selective_referral"
+    selective_referral_dir.mkdir(parents=True, exist_ok=True)
+
+    pd.DataFrame(
+        [
+            {
+                "coverage": 1.0,
+                "deferred_count": 0,
+                "accepted_count": 100,
+                "accuracy": 0.80,
+                "sensitivity": 0.90,
+                "specificity": 0.70,
+                "balanced_accuracy": 0.80,
+                "false_positives": 2,
+                "false_negatives": 1,
+                "referral_rate": 0.5,
+            },
+            {
+                "coverage": 0.8,
+                "deferred_count": 20,
+                "accepted_count": 80,
+                "accuracy": 0.85,
+                "sensitivity": 0.92,
+                "specificity": 0.78,
+                "balanced_accuracy": 0.85,
+                "false_positives": 1,
+                "false_negatives": 0,
+                "referral_rate": 0.9,
+            },
+            {
+                "coverage": 0.7,
+                "deferred_count": 30,
+                "accepted_count": 70,
+                "total_count": 100,
+                "accuracy": 0.87,
+                "sensitivity": 0.95,
+                "specificity": 0.80,
+                "balanced_accuracy": 0.88,
+                "false_positives": 1,
+                "false_negatives": 0,
+                "referral_rate": 0.1,
+            },
+        ]
+    ).to_csv(selective_referral_dir / "bayes_max_sensitivity_confidence.csv", index=False)
+
+    dataframe = build_selective_referral_table(base_output_dir)
+
+    coverage_to_referral_rate = {
+        row.coverage: row.referral_rate for row in dataframe.itertuples(index=False)
+    }
+    assert coverage_to_referral_rate[1.0] == pytest.approx(0.0)
+    assert coverage_to_referral_rate[0.8] == pytest.approx(0.2)
+    assert coverage_to_referral_rate[0.7] == pytest.approx(0.3)
 
 
 def test_main_prints_summary_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
