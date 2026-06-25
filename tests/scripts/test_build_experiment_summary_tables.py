@@ -364,6 +364,7 @@ def test_build_model_comparison_table_supports_nested_metrics_and_skips_missing(
 
 def test_build_selective_referral_table_recomputes_referral_rate_from_counts(
     tmp_path: Path,
+    recwarn: pytest.WarningsRecorder,
 ) -> None:
     base_output_dir = tmp_path / "outputs"
     selective_referral_dir = base_output_dir / "selective_referral"
@@ -419,6 +420,8 @@ def test_build_selective_referral_table_recomputes_referral_rate_from_counts(
     assert coverage_to_referral_rate[1.0] == pytest.approx(0.0)
     assert coverage_to_referral_rate[0.8] == pytest.approx(0.2)
     assert coverage_to_referral_rate[0.7] == pytest.approx(0.3)
+    warning_messages = [str(warning.message) for warning in recwarn]
+    assert any("Skipping missing artifact" in message for message in warning_messages)
 
 
 def test_main_prints_summary_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
