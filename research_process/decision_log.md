@@ -1036,3 +1036,59 @@ Limitations:
 - Compare future methods using both APTOS and DDR when possible.
 
 - Keep threshold-sweep and selective-referral controls in all future external-validation analyses.
+
+## Decision — Treat SNGP-Style Variance As An Experimental Distance-Aware Proxy
+
+**Date:** 2026-06-24
+
+**Status:** Accepted
+
+### Context
+
+The project added an SNGP-style cached-feature head for frozen RETFound embeddings. The goal was to test whether a distance-aware uncertainty head can improve safety-oriented screening analysis, especially selective referral and later APTOS-to-DDR dataset-shift validation.
+
+The implementation is intentionally limited to cached RETFound features. It is not a full end-to-end SNGP RETFound model.
+
+The SNGP-style head produces three uncertainty-related columns:
+
+1. `predictive_entropy`
+2. `sngp_variance`
+3. `sngp_uncertainty`
+
+Code inspection confirmed that `sngp_variance` is computed as a diagonal variance-style proxy:
+
+    sum_j phi_j(x)^2 / precision_diag_j
+
+where `phi(x)` is the random Fourier feature representation and `precision_diag` is fit from the training split.
+
+The combined score is currently:
+
+    sngp_uncertainty = predictive_entropy + sngp_variance
+
+with no normalization, calibration, or learned weighting.
+
+### Decision
+
+Interpret `sngp_variance` as an experimental diagonal SNGP-style variance proxy, not as a validated standalone uncertainty score.
+
+Interpret `sngp_uncertainty` as an exploratory raw combined score, not as a calibrated or guaranteed-better uncertainty metric.
+
+Downstream analyses should report `predictive_entropy`, `sngp_variance`, and `sngp_uncertainty` separately.
+
+### Rationale
+
+APTOS validation diagnostics showed that `predictive_entropy` ranked errors well, while `sngp_variance` did not. In the SNGP sensitivity-selected APTOS run, incorrect predictions had lower mean `sngp_variance` than correct predictions.
+
+This does not indicate an obvious algebraic implementation bug. The variance formula uses inverse diagonal precision as intended. Instead, the result suggests that the current diagonal SNGP variance proxy may not align with error risk on APTOS internal validation.
+
+Because selective referral is a ranking problem, adding an unnormalized variance term to entropy can degrade the referral ranking even if the variance term is mathematically valid.
+
+### Consequences
+
+- Do not claim that the raw combined SNGP uncertainty score is superior to entropy.
+- Treat `predictive_entropy` as the primary validated referral signal so far.
+- Treat `sngp_variance` as a distance-aware diagnostic whose main test is APTOS-to-DDR transfer.
+- Keep all three columns for analysis.
+- Consider later adding normalized or rank-based combined scores, but do not replace the current results retroactively.
+- The key remaining question is whether `sngp_variance` becomes more useful under DDR dataset shift.
+

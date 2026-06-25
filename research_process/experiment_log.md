@@ -1511,3 +1511,210 @@ Interpretation: threshold tuning can reduce or eliminate false negatives, but on
 ### Conclusion
 
 DDR externally validates the qualitative direction of the APTOS result: uncertainty-aware selective referral reduces false negatives among accepted automated decisions. However, DDR does not reproduce the APTOS zero-false-negative result at practical coverage levels. The stronger final claim should therefore remain that uncertainty-aware selective referral improves the safety/coverage tradeoff, not that Bayesian layers uniquely eliminate false negatives.
+
+## Experiment: SNGP-Style Cached-Feature Head On APTOS
+
+**Date:** 2026-06-24  
+**Status:** Completed for APTOS internal validation
+
+### Objective
+
+Add and evaluate an SNGP-style distance-aware cached-feature head for frozen RETFound embeddings.
+
+The goal was to compare another uncertainty-aware head against the existing cached-feature methods:
+
+1. Softmax linear head
+2. Temperature scaling
+3. Variational Bayesian last layer
+4. Laplace last layer
+5. SNGP-style random-feature head
+
+This is not a full end-to-end SNGP RETFound model. The RETFound encoder remains frozen and only cached feature vectors are used.
+
+### Implementation Summary
+
+Implemented:
+
+- `src/uncertainty_retfound/models/sngp.py`
+- `scripts/training/train_sngp_feature_head.py`
+- `tests/models/test_sngp.py`
+- `tests/scripts/test_train_sngp_feature_head.py`
+
+The model uses:
+
+1. Optional spectral-normalized projection
+2. Fixed random Fourier features
+3. Linear classifier
+4. Diagonal precision estimate over random-feature activations
+
+The prediction CSV includes:
+
+- `probability_class_0`
+- `probability_class_1`
+- `confidence`
+- `predictive_entropy`
+- `sngp_variance`
+- `sngp_uncertainty`
+- `predicted_label`
+- `true_label`
+- `id_code`
+- `image_path`
+- `is_correct`
+
+The full test suite passed after implementation:
+
+    139 passed
+
+### APTOS Val-Loss-Selected SNGP Run
+
+Output path:
+
+    outputs/feature_heads/aptos2019_retfound_sngp_val_loss
+
+Best epoch:
+
+    48
+
+Best validation metrics:
+
+1. Accuracy: `0.9071`
+2. Sensitivity: `0.8831`
+3. Specificity: `0.9245`
+4. Balanced accuracy: `0.9038`
+5. AUC: `0.9756`
+6. ECE: `0.0288`
+7. Confusion matrix: `[[196, 16], [18, 136]]`
+
+### APTOS Sensitivity-Selected SNGP Run
+
+Output path:
+
+    outputs/feature_heads/aptos2019_retfound_sngp_sensitivity
+
+Best epoch:
+
+    14
+
+Best validation metrics:
+
+1. Accuracy: `0.9098`
+2. Sensitivity: `0.9805`
+3. Specificity: `0.8585`
+4. Balanced accuracy: `0.9195`
+5. AUC: `0.9711`
+6. ECE: `0.0287`
+7. Confusion matrix: `[[182, 30], [3, 151]]`
+
+### Threshold Sweep Result
+
+For the sensitivity-selected SNGP model, lowering the classification threshold reduced false negatives further.
+
+At threshold `0.40`:
+
+1. False negatives: `1`
+2. False positives: `37`
+3. Sensitivity: `0.9935`
+4. Specificity: `0.8255`
+5. Balanced accuracy: `0.9095`
+
+At threshold `0.20`:
+
+1. False negatives: `0`
+2. False positives: `67`
+3. Sensitivity: `1.0000`
+4. Specificity: `0.6840`
+5. Balanced accuracy: `0.8420`
+
+### Selective Referral Result
+
+Selective referral was evaluated using three uncertainty signals:
+
+1. `predictive_entropy`
+2. `sngp_variance`
+3. `sngp_uncertainty`
+
+The strongest APTOS result came from `predictive_entropy`.
+
+At approximately `80%` coverage using `predictive_entropy`:
+
+1. Accepted cases: `293 / 366`
+2. Deferred cases: `73 / 366`
+3. Referral rate: `0.1995`
+4. Accepted-case false negatives: `0`
+5. Accepted-case false positives: `14`
+6. Accepted-case sensitivity: `1.0000`
+7. Accepted-case specificity: `0.9146`
+8. Accepted-case accuracy: `0.9522`
+
+At approximately `80%` coverage using raw combined `sngp_uncertainty`:
+
+1. Accepted-case false negatives: `1`
+2. Accepted-case false positives: `14`
+3. Accepted-case sensitivity: `0.9924`
+4. Accepted-case specificity: `0.9136`
+5. Accepted-case accuracy: `0.9488`
+
+At approximately `80%` coverage using `sngp_variance` alone:
+
+1. Accepted-case false negatives: `3`
+2. Accepted-case false positives: `30`
+3. Accepted-case sensitivity: `0.9732`
+4. Accepted-case specificity: `0.8343`
+5. Accepted-case accuracy: `0.8874`
+
+### Referral-Rate Bug Fix
+
+During analysis, the `referral_rate` column in `scripts.analysis.evaluate_selective_referral` was found to be misleading. It did not equal:
+
+    deferred_count / total_count
+
+The script was fixed so that:
+
+    referral_rate = deferred_count / total_count
+    coverage = accepted_count / total_count
+
+The previous signal was preserved under the clearer name:
+
+    accepted_positive_prediction_rate
+
+The test suite passed after the fix:
+
+    139 passed
+
+### SNGP Variance Diagnostic
+
+Diagnostic analysis showed:
+
+1. `predictive_entropy` was higher on incorrect predictions than correct predictions.
+2. `sngp_variance` was lower on incorrect predictions than correct predictions.
+3. `sngp_uncertainty` was very highly correlated with `predictive_entropy`.
+
+Observed means:
+
+    predictive_entropy:
+    correct mean = 0.2597
+    wrong mean   = 0.5076
+
+    sngp_variance:
+    correct mean = 0.2541
+    wrong mean   = 0.2331
+
+    sngp_uncertainty:
+    correct mean = 0.5138
+    wrong mean   = 0.7407
+
+False-negative cases had high entropy but low SNGP variance:
+
+    false-negative predictive_entropy mean = 0.6364
+    false-negative sngp_variance mean     = 0.2280
+
+Code inspection confirmed that `sngp_variance` uses the intended inverse diagonal precision formula. Therefore, this appears to be a design/validation limitation of the diagonal variance proxy rather than an obvious algebraic implementation bug.
+
+### Interpretation
+
+The SNGP-style head provides a strong high-sensitivity APTOS operating point. The sensitivity-selected checkpoint reduced false negatives to `3`, and threshold tuning could reduce false negatives to `0` at the cost of additional false positives.
+
+However, the best selective-referral signal on APTOS was `predictive_entropy`, not the diagonal SNGP variance proxy. The raw combined score `sngp_uncertainty = predictive_entropy + sngp_variance` should therefore be treated as exploratory.
+
+The key remaining test is DDR second-dataset validation. That is where the distance-aware variance proxy may be more useful if it captures dataset shift.
+
