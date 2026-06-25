@@ -106,7 +106,11 @@ def _build_model_row(
         tn, fp, fn, tp = _extract_confusion_counts(metrics["confusion_matrix"])
 
     total = tn + fp + fn + tp
-    referral_rate = (tp + fp) / total if total > 0 else None
+    positive_prediction_rate = (tp + fp) / total if total > 0 else None
+    if positive_prediction_rate is None:
+        fallback_positive_prediction_rate = metrics.get("positive_prediction_rate")
+        if isinstance(fallback_positive_prediction_rate, (int, float)):
+            positive_prediction_rate = float(fallback_positive_prediction_rate)
 
     return {
         "model": model_name,
@@ -123,7 +127,8 @@ def _build_model_row(
         "brier": metrics.get("brier_score"),
         "false_positives": fp,
         "false_negatives": fn,
-        "referral_rate": referral_rate,
+        "referral_rate": 0.0,
+        "positive_prediction_rate": positive_prediction_rate,
     }
 
 
@@ -244,6 +249,14 @@ def build_decision_policy_table(base_output_dir: str | Path) -> pd.DataFrame:
     dataframe = pd.read_csv(path).copy()
     if "policy" not in dataframe.columns:
         raise ValueError(f"Decision-policy comparison CSV missing 'policy' column: {path}")
+
+    if "positive_prediction_rate" not in dataframe.columns:
+        if "referral_rate" in dataframe.columns:
+            dataframe["positive_prediction_rate"] = dataframe["referral_rate"]
+        else:
+            dataframe["positive_prediction_rate"] = pd.NA
+
+    dataframe["referral_rate"] = 0.0
     return dataframe
 
 

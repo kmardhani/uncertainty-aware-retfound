@@ -111,8 +111,18 @@ def _write_synthetic_outputs(base_output_dir: Path) -> None:
     decision_policy_dir.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
         [
-            {"policy": "model:softmax_temp", "accuracy": 0.88, "false_negatives": 5},
-            {"policy": "policy:or_rule", "accuracy": 0.89, "false_negatives": 4},
+            {
+                "policy": "model:softmax_temp",
+                "accuracy": 0.88,
+                "false_negatives": 5,
+                "referral_rate": 0.45,
+            },
+            {
+                "policy": "policy:or_rule",
+                "accuracy": 0.89,
+                "false_negatives": 4,
+                "referral_rate": 0.55,
+            },
         ]
     ).to_csv(decision_policy_dir / "retfound_policy_comparison.csv", index=False)
 
@@ -130,7 +140,7 @@ def _write_synthetic_outputs(base_output_dir: Path) -> None:
                 "balanced_accuracy": 0.80,
                 "false_positives": 2,
                 "false_negatives": 1,
-                "referral_rate": 0.40,
+                "referral_rate": 0.0,
             },
             {
                 "coverage": 0.91,
@@ -142,7 +152,7 @@ def _write_synthetic_outputs(base_output_dir: Path) -> None:
                 "balanced_accuracy": 0.82,
                 "false_positives": 2,
                 "false_negatives": 1,
-                "referral_rate": 0.39,
+                "referral_rate": 0.1,
             },
             {
                 "coverage": 0.81,
@@ -154,7 +164,7 @@ def _write_synthetic_outputs(base_output_dir: Path) -> None:
                 "balanced_accuracy": 0.85,
                 "false_positives": 1,
                 "false_negatives": 0,
-                "referral_rate": 0.38,
+                "referral_rate": 0.2,
             },
             {
                 "coverage": 0.69,
@@ -166,7 +176,7 @@ def _write_synthetic_outputs(base_output_dir: Path) -> None:
                 "balanced_accuracy": 0.88,
                 "false_positives": 1,
                 "false_negatives": 0,
-                "referral_rate": 0.35,
+                "referral_rate": 0.3,
             },
         ]
     )
@@ -278,10 +288,32 @@ def test_run_build_experiment_summary_tables_writes_expected_outputs(tmp_path: P
         "ddr_bayesian_val_loss_selected",
         "ddr_bayesian_sensitivity_selected",
     }
+    assert model_comparison["coverage"].eq(1.0).all()
+    assert model_comparison["deferred_count"].eq(0).all()
+    assert model_comparison["referral_rate"].eq(0.0).all()
+    assert "positive_prediction_rate" in model_comparison.columns
+    assert model_comparison["positive_prediction_rate"].notna().all()
+    expected_positive_prediction_rates = {
+        "ddr_from_aptos_sngp_sensitivity": (17 + 6) / 40,
+    }
+    for model_name in model_comparison["model"]:
+        expected_positive_prediction_rates.setdefault(model_name, (17 + 2) / 40)
+    for row in model_comparison.itertuples(index=False):
+        assert row.positive_prediction_rate == pytest.approx(
+            expected_positive_prediction_rates[row.model]
+        )
     assert len(decision_policy) == 2
+    assert decision_policy["referral_rate"].eq(0.0).all()
+    assert "positive_prediction_rate" in decision_policy.columns
+    assert decision_policy["positive_prediction_rate"].tolist() == pytest.approx([0.45, 0.55])
     assert len(selective_referral) == 48
     assert set(selective_referral["target_coverage"]) == {1.0, 0.9, 0.8, 0.7}
     assert {"run_name", "uncertainty_column"}.issubset(selective_referral.columns)
+    assert selective_referral["referral_rate"].eq(
+        selective_referral["deferred_count"] / (
+            selective_referral["accepted_count"] + selective_referral["deferred_count"]
+        )
+    ).all()
     assert len(threshold_sweep) == 8
     assert set(threshold_sweep["selected_policy"]) == {
         "best_balanced_accuracy",
@@ -323,6 +355,8 @@ def test_build_model_comparison_table_supports_nested_metrics_and_skips_missing(
     assert dataframe.iloc[0]["model"] == "ddr_from_aptos_sngp_sensitivity"
     assert dataframe.iloc[0]["false_positives"] == 6
     assert dataframe.iloc[0]["false_negatives"] == 3
+    assert dataframe.iloc[0]["referral_rate"] == 0.0
+    assert dataframe.iloc[0]["positive_prediction_rate"] == pytest.approx((17 + 6) / 40)
     warning_messages = [str(warning.message) for warning in recwarn]
     assert any("Skipping missing model metrics file" in message for message in warning_messages)
 
