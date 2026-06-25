@@ -16,3 +16,7 @@ wheels/
 /data/
 /outputs/
 /results/
+
+# Private working notes and internal research logs
+research_process/
+docs/
