@@ -14,6 +14,13 @@
 \usepackage{enumitem}
 \usepackage{xcolor}
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.8}
 
 \title{Uncertainty-Aware Last-Layer Adaptation of RETFound for Referable Diabetic Retinopathy Screening Under Dataset Shift}
 \author{
@@ -117,9 +124,9 @@ The APTOS-trained SNGP sensitivity-selected checkpoint is evaluated directly on 
 
 APTOS full-coverage results show that several uncertainty-aware heads improved screening-oriented operating points relative to the cached softmax baseline. The sensitivity-selected variational Bayesian model reduced false negatives from 17 to 6. The sensitivity-selected Laplace model reduced false negatives to 8. The SNGP sensitivity-selected model reduced false negatives to 3 while keeping AUC at 0.9711 and balanced accuracy at 0.9195.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/aptos_full_coverage_comparison.png}
+\includegraphics[width=0.82\textwidth]{figures/aptos_full_coverage_comparison.png}
 \caption{APTOS full-coverage false-negative and false-positive counts for key internal models.}
 \label{fig:aptos-full-coverage}
 \end{figure}
@@ -128,16 +135,16 @@ These APTOS improvements did not justify a broad superiority claim. The softmax 
 
 DDR results were more sobering. The native DDR Bayesian sensitivity-selected model reduced false negatives from 188 to 129 relative to DDR softmax, which qualitatively reproduced the APTOS direction. However, specificity fell to 0.7031. The APTOS-to-DDR SNGP transfer result was a clear negative result: sensitivity fell to 0.2701, AUC to 0.5833, and false negatives rose to 616.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/ddr_full_coverage_comparison.png}
+\includegraphics[width=0.84\textwidth]{figures/ddr_full_coverage_comparison.png}
 \caption{DDR full-coverage false-negative and false-positive counts. The APTOS-trained SNGP transfer checkpoint performs poorly under shift.}
 \label{fig:ddr-full-coverage}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/ddr_sensitivity_specificity.png}
+\includegraphics[width=0.82\textwidth]{figures/ddr_sensitivity_specificity.png}
 \caption{DDR sensitivity and specificity comparison for native DDR heads and the APTOS-to-DDR SNGP transfer evaluation.}
 \label{fig:ddr-sens-spec}
 \end{figure}
@@ -149,9 +156,9 @@ Threshold sweeps showed that false-negative reduction was not unique to Bayesian
 
 On DDR, the same control remained important. The native DDR Bayesian sensitivity-selected model reached zero false negatives at threshold 0.03, but produced 979 false positives. The DDR temperature-scaled softmax model also reached zero false negatives at threshold 0.03, but with 928 false positives and specificity of only 0.1025. This is clinically different from selective referral because it treats almost the entire validation set as positive.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/ddr_threshold_sweep_summary.png}
+\includegraphics[width=0.82\textwidth]{figures/ddr_threshold_sweep_summary.png}
 \caption{DDR threshold-sweep comparison across balanced and low-false-negative operating points.}
 \label{fig:ddr-thresholds}
 \end{figure}
@@ -165,9 +172,9 @@ On DDR, native Bayesian uncertainty signals remained useful but weaker. At appro
 
 By contrast, the APTOS-trained SNGP transfer checkpoint did not yield useful DDR selective-referral behavior. At approximately 80\% coverage, its entropy-based referral still left 519 accepted-case false negatives, and the variance-only signal left 478. The problem was not simply poor calibration; the cross-dataset ranking itself was weak.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.97\textwidth]{figures/ddr_selective_referral_80.png}
+\includegraphics[width=0.84\textwidth]{figures/ddr_selective_referral_80.png}
 \caption{Accepted-case false negatives at approximately 80\% coverage for DDR Bayesian and APTOS-to-DDR SNGP uncertainty signals. Lower is better.}
 \label{fig:ddr-selective}
 \end{figure}
@@ -175,14 +182,14 @@ By contrast, the APTOS-trained SNGP transfer checkpoint did not yield useful DDR
 \subsection{SNGP transfer failure}
 \input{tables/sngp_internal_vs_transfer.tex}
 
-The SNGP internal-versus-transfer comparison is the clearest negative result in the study. Internally on APTOS, the sensitivity-selected SNGP model achieved sensitivity 0.9805, balanced accuracy 0.9195, and only 3 false negatives. The same checkpoint evaluated directly on DDR without retraining dropped to sensitivity 0.2701 and balanced accuracy 0.5688.
-
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/sngp_internal_vs_transfer.png}
+\includegraphics[width=0.78\textwidth]{figures/sngp_internal_vs_transfer.png}
 \caption{APTOS internal validation versus APTOS-to-DDR transfer for the sensitivity-selected SNGP checkpoint.}
 \label{fig:sngp-transfer}
 \end{figure}
+
+The SNGP internal-versus-transfer comparison is the clearest negative result in the study. Internally on APTOS, the sensitivity-selected SNGP model achieved sensitivity 0.9805, balanced accuracy 0.9195, and only 3 false negatives. The same checkpoint evaluated directly on DDR without retraining dropped to sensitivity 0.2701 and balanced accuracy 0.5688.
 
 This should be interpreted conservatively. The result does not show that SNGP is universally ineffective; it shows that this SNGP-style cached-feature implementation did not improve cross-dataset robustness in this experiment.
 
