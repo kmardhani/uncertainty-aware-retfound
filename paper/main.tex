@@ -6,6 +6,7 @@
 \usepackage{lmodern}
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{placeins}
 \usepackage{graphicx}
 \usepackage{amsmath}
 \usepackage{hyperref}
@@ -30,12 +31,11 @@ Boulder, CO, USA \\
 \begin{center}
 \small
 Repository: \url{https://github.com/kmardhani/uncertainty-aware-retfound} \\
-Commit hash: \texttt{b7e579b183eda54e99d5d3944574fac7dca9d322} \\
 arXiv categories: \texttt{cs.CV} (primary), \texttt{cs.LG} (secondary)
 \end{center}
 
 \begin{abstract}
-This paper presents a safety-centered empirical evaluation of uncertainty-aware last-layer adaptation for referable diabetic retinopathy screening using RETFound, a self-supervised vision-transformer retinal foundation model used here as a frozen feature encoder, and the public APTOS 2019 and DDR diabetic retinopathy fundus-image datasets. We compare a cached-feature softmax head, post-hoc temperature scaling, variational Bayesian last-layer heads, a diagonal Laplace last-layer approximation, and an SNGP-style cached-feature head. On APTOS, uncertainty-aware operating points improved sensitivity and selective-referral behavior. The strongest APTOS selective-referral result deferred approximately 20\% of cases and reduced accepted-case false negatives to zero while preserving high accepted-case specificity. However, threshold tuning also reduced false negatives at high false-positive cost, so false-negative reduction alone was not unique to Bayesian modeling. On DDR, native Bayesian heads qualitatively reproduced the APTOS direction but with weaker tradeoffs, while the APTOS-trained SNGP checkpoint transferred poorly and failed to provide useful external selective-referral behavior. These results support a narrower claim than state-of-the-art improvement: uncertainty-aware last-layer heads can improve internal safety-oriented operating points, but trustworthy retinal screening claims require explicit safety--coverage evaluation and second-dataset validation under shift.
+This paper presents a safety-centered empirical evaluation of uncertainty-aware last-layer adaptation for referable diabetic retinopathy screening using RETFound, a self-supervised vision-transformer retinal foundation model used here as a frozen feature encoder, and the public APTOS 2019 and DDR diabetic retinopathy fundus-image datasets. We compare a cached-feature softmax head, post-hoc temperature scaling, variational Bayesian last-layer heads, a diagonal Laplace last-layer approximation, and an SNGP-style cached-feature head. On APTOS, uncertainty-aware operating points improved sensitivity and selective-referral behavior. The strongest APTOS selective-referral result deferred approximately 20\% of cases and reduced accepted-case false negatives to zero while preserving high accepted-case specificity. However, threshold tuning also reduced false negatives at high false-positive cost, so false-negative reduction alone was not unique to Bayesian modeling. On DDR, native Bayesian heads qualitatively reproduced the APTOS direction but with weaker tradeoffs, while the APTOS-trained SNGP checkpoint transferred poorly and failed to provide useful external selective-referral behavior. These results highlight the value of safety-centered evaluation beyond aggregate accuracy: uncertainty-aware last-layer heads can improve internal safety-oriented operating points, but trustworthy retinal screening claims require explicit safety--coverage evaluation and second-dataset validation under shift.
 \end{abstract}
 
 \section{Introduction}
@@ -186,6 +186,7 @@ The SNGP internal-versus-transfer comparison is the clearest negative result in 
 
 This should be interpreted conservatively. The result does not show that SNGP is universally ineffective; it shows that this SNGP-style cached-feature implementation did not improve cross-dataset robustness in this experiment.
 
+\FloatBarrier
 \section{Discussion}
 
 \subsection{What worked}
@@ -209,21 +210,46 @@ Selective referral addresses a different workflow from threshold-only screening.
 This is not a clinical deployment study. It is a research-grade empirical evaluation on two retinal datasets using frozen RETFound features. The study is limited by the absence of raw-image fine-tuning, limited uncertainty families, and evaluation on a single external dataset rather than multiple independent cohorts. The manuscript package in this repository also reconstructs publication tables from locked summary results because the full raw experiment output directories are not included in this checkout.
 
 \section{Conclusion}
-Uncertainty-aware last-layer adaptation on frozen RETFound features produced useful internal safety-oriented operating points, especially when evaluated through selective referral rather than accuracy alone. However, the study also shows three constraints on what can be honestly claimed. First, false-negative reduction is not unique to Bayesian modeling because threshold tuning can also reduce false negatives at substantial false-positive cost. Second, uncertainty signals that look useful internally may weaken or fail under external dataset shift. Third, negative transfer results such as the APTOS-to-DDR SNGP evaluation are essential evidence, not side notes. The practical conclusion is therefore narrower than state-of-the-art improvement: uncertainty-aware retinal screening systems should be evaluated using explicit safety--coverage tradeoffs and second-dataset validation.
+Uncertainty-aware last-layer adaptation on frozen RETFound features produced useful internal safety-oriented operating points, especially when evaluated through selective referral rather than accuracy alone. However, the study also shows three constraints on what can be honestly claimed. First, false-negative reduction is not unique to Bayesian modeling because threshold tuning can also reduce false negatives at substantial false-positive cost. Second, uncertainty signals that look useful internally may weaken or fail under external dataset shift. Third, negative transfer results such as the APTOS-to-DDR SNGP evaluation are essential evidence, not side notes. The practical conclusion is that uncertainty-aware retinal screening systems should be evaluated using explicit safety--coverage tradeoffs and second-dataset validation, rather than relying on aggregate accuracy or in-distribution gains alone.
 
 \section{Reproducibility}
-\input{tables/reproducibility_summary.tex}
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Reproducibility metadata for the manuscript package.}
+\label{tab:reproducibility}
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}X}
+\toprule
+Item & Value \\
+\midrule
+Repository & \url{https://github.com/kmardhani/uncertainty-aware-retfound} \\
+Author & Karim Mardhani \\
+Affiliation & Master of Science in Artificial Intelligence; University of Colorado Boulder; Boulder, CO, USA \\
+Email & \nolinkurl{Karim.Mardhani@colorado.edu} \\
+Title & Uncertainty-Aware Last-Layer Adaptation of RETFound for Referable Diabetic Retinopathy Screening Under Dataset Shift \\
+arXiv primary & cs.CV \\
+arXiv secondary & cs.LG \\
+Project status & Independent research initiative; not sponsored, supervised, or formally endorsed by the university \\
+Task & Binary referable diabetic retinopathy \\
+Backbone & Frozen RETFound\_mae \\
+Feature dimension & 1024 \\
+APTOS split & 2930 / 366 / 366 \\
+DDR split & 8765 / 1878 / 1879 \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 The repository contains scripts for metadata preparation, frozen feature extraction, cached-feature training, calibration, threshold sweeps, selective referral, and manuscript asset generation. The paper assets can be regenerated from the repository root with:
 \begin{verbatim}
 uv run python paper/scripts/make_paper_assets.py
 \end{verbatim}
+A stable release tag should be used for archival reproduction.
 
 \section*{Acknowledgments}
 This work was conducted as an independent research initiative by the author. The author is enrolled in the part-time, course-based Master of Science in Artificial Intelligence program at the University of Colorado Boulder; however, this project was not sponsored, supervised, or formally endorsed by the university.
 
 \appendix
-\section{Additional Notes On Clinical Interpretation}
+\section{Additional Notes on Clinical Interpretation}
 Accepted-case selective-referral metrics are conditional on non-deferred cases and should not be interpreted as full-population screening performance. Likewise, the APTOS-to-DDR SNGP result should be interpreted specifically as a transfer evaluation without retraining, not as a statement about every possible SNGP design.
 
 \bibliographystyle{plainnat}
