@@ -222,4 +222,6 @@ A formal citation will be added after the arXiv version is available.
 
 ## License
 
-A license has not yet been finalized. Until a license is added, reuse rights are not explicitly granted beyond viewing the public repository.
+Code in this repository is released under the MIT License. See [LICENSE](LICENSE).
+
+Datasets, RETFound checkpoints, and any third-party model artifacts are not included in this repository and remain governed by their original licenses and terms of use.
