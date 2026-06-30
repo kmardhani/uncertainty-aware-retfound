@@ -66,6 +66,7 @@ Uncertainty-aware last-layer heads can improve internal safety-oriented operatin
 
 \section{Related Work}
 RETFound is a retinal foundation model pretrained for ophthalmic image representation learning and has become a natural frozen-backbone starting point for downstream retinal tasks \citep{zhou2023retfound}. Our work uses RETFound as a fixed feature extractor rather than fine-tuning it end to end, which keeps the methodological question focused on last-layer uncertainty rather than representation learning.
+Recent ophthalmic foundation-model studies have also begun to compare and combine eye-specific foundation models across multiple retinal and ophthalmic diagnostic tasks, including FusionFM, which evaluates several ophthalmic foundation models and explores fusion strategies for ophthalmic diagnosis~\citep{zou2025fusionfm}.
 
 Uncertainty estimation for neural networks has a large literature, including approximate Bayesian inference, variational methods, Laplace approximations, and distance-aware posteriors \citep{neal1996bayesian,blundell2015weightuncertainty,ritter2018scalable,daxberger2021laplace,liu2020simple}. In medical imaging, calibration and uncertainty matter because ranking errors by confidence may support safer decision support or defer-to-human workflows. That motivation aligns with selective prediction and selective classification work, where a model is allowed to abstain on uncertain examples instead of making every decision automatically \citep{elyaniv2010foundation,geifman2017selective}.
 
